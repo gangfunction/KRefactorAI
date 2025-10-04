@@ -36,13 +36,95 @@ A Kotlin library that analyzes module dependencies using minimal polynomial algo
 
 - Java 17 or higher
 - Kotlin 1.9+
-- OpenAI API key (for AI features)
+- OpenAI API key (for AI features, optional)
+
+> 📖 **자세한 설치 가이드**: [INSTALLATION.md](INSTALLATION.md)를 참고하세요.
 
 ### Installation
 
-Add to your `build.gradle.kts`:
+KRefactorAI는 현재 다음 방법으로 설치할 수 있습니다:
+
+#### Option 1: JitPack (권장)
+
+**Step 1**: 프로젝트의 `settings.gradle.kts`에 JitPack 저장소 추가:
 
 ```kotlin
+dependencyResolutionManagement {
+    repositories {
+        mavenCentral()
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+```
+
+또는 `build.gradle.kts`에 추가:
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven { url = uri("https://jitpack.io") }
+}
+```
+
+**Step 2**: 의존성 추가:
+
+```kotlin
+dependencies {
+    implementation("com.github.gangfunction:KRefactorAI:master-SNAPSHOT")
+    // 또는 특정 커밋 사용
+    // implementation("com.github.gangfunction:KRefactorAI:2b9634e")
+}
+```
+
+#### Option 2: GitHub Packages
+
+**Step 1**: GitHub Personal Access Token 생성
+- GitHub Settings → Developer settings → Personal access tokens → Generate new token
+- `read:packages` 권한 선택
+
+**Step 2**: `~/.gradle/gradle.properties`에 인증 정보 추가:
+
+```properties
+gpr.user=YOUR_GITHUB_USERNAME
+gpr.token=YOUR_GITHUB_TOKEN
+```
+
+**Step 3**: `build.gradle.kts`에 저장소 및 의존성 추가:
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven {
+        url = uri("https://maven.pkg.github.com/gangfunction/KRefactorAI")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+            password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
+        }
+    }
+}
+
+dependencies {
+    implementation("io.github.gangfunction:krefactorai:0.1.0-SNAPSHOT")
+}
+```
+
+#### Option 3: 로컬 빌드
+
+```bash
+# 저장소 클론
+git clone https://github.com/gangfunction/KRefactorAI.git
+cd KRefactorAI
+
+# 로컬 Maven 저장소에 설치
+./gradlew publishToMavenLocal
+
+# 다른 프로젝트에서 사용
+# build.gradle.kts에 추가:
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
 dependencies {
     implementation("io.github.gangfunction:krefactorai:0.1.0-SNAPSHOT")
 }
