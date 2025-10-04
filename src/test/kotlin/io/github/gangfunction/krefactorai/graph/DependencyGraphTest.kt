@@ -6,7 +6,6 @@ import io.github.gangfunction.krefactorai.model.ModuleType
 import kotlin.test.*
 
 class DependencyGraphTest {
-
     private lateinit var graph: DependencyGraph
     private lateinit var moduleA: Module
     private lateinit var moduleB: Module
@@ -23,7 +22,7 @@ class DependencyGraphTest {
     @Test
     fun `test add module`() {
         graph.addModule(moduleA)
-        
+
         assertTrue(graph.getModules().contains(moduleA))
         assertEquals(1, graph.size())
     }
@@ -32,7 +31,7 @@ class DependencyGraphTest {
     fun `test add dependency`() {
         val dependency = Dependency(moduleA, moduleB)
         graph.addDependency(dependency)
-        
+
         assertEquals(2, graph.getModules().size)
         assertEquals(1, graph.getDependencies().size)
         assertTrue(graph.getDependenciesOf(moduleA).contains(moduleB))
@@ -42,9 +41,9 @@ class DependencyGraphTest {
     fun `test get dependencies of module`() {
         graph.addDependency(Dependency(moduleA, moduleB))
         graph.addDependency(Dependency(moduleA, moduleC))
-        
+
         val dependencies = graph.getDependenciesOf(moduleA)
-        
+
         assertEquals(2, dependencies.size)
         assertTrue(dependencies.contains(moduleB))
         assertTrue(dependencies.contains(moduleC))
@@ -54,9 +53,9 @@ class DependencyGraphTest {
     fun `test get dependents of module`() {
         graph.addDependency(Dependency(moduleA, moduleC))
         graph.addDependency(Dependency(moduleB, moduleC))
-        
+
         val dependents = graph.getDependentsOf(moduleC)
-        
+
         assertEquals(2, dependents.size)
         assertTrue(dependents.contains(moduleA))
         assertTrue(dependents.contains(moduleB))
@@ -68,9 +67,9 @@ class DependencyGraphTest {
         graph.addDependency(Dependency(moduleA, moduleB))
         graph.addDependency(Dependency(moduleB, moduleC))
         graph.addDependency(Dependency(moduleC, moduleA))
-        
+
         val cycles = graph.detectCircularDependencies()
-        
+
         assertTrue(cycles.isNotEmpty())
     }
 
@@ -79,9 +78,9 @@ class DependencyGraphTest {
         // Create a DAG: A -> B -> C
         graph.addDependency(Dependency(moduleA, moduleB))
         graph.addDependency(Dependency(moduleB, moduleC))
-        
+
         val cycles = graph.detectCircularDependencies()
-        
+
         assertTrue(cycles.isEmpty())
     }
 
@@ -89,9 +88,9 @@ class DependencyGraphTest {
     fun `test adjacency matrix`() {
         graph.addDependency(Dependency(moduleA, moduleB))
         graph.addDependency(Dependency(moduleB, moduleC))
-        
+
         val matrix = graph.toAdjacencyMatrix()
-        
+
         assertEquals(3, matrix.size)
         assertEquals(3, matrix[0].size)
     }
@@ -100,10 +99,10 @@ class DependencyGraphTest {
     fun `test in-degree and out-degree`() {
         graph.addDependency(Dependency(moduleA, moduleB))
         graph.addDependency(Dependency(moduleC, moduleB))
-        
+
         assertEquals(0, graph.getInDegree(moduleA))
         assertEquals(1, graph.getOutDegree(moduleA))
-        
+
         assertEquals(2, graph.getInDegree(moduleB))
         assertEquals(0, graph.getOutDegree(moduleB))
     }
@@ -114,4 +113,3 @@ class DependencyGraphTest {
         assertEquals(0, graph.size())
     }
 }
-

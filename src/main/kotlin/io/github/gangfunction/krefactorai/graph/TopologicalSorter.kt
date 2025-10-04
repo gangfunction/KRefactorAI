@@ -9,7 +9,6 @@ private val logger = KotlinLogging.logger {}
  * Performs topological sorting on a dependency graph
  */
 class TopologicalSorter(private val graph: DependencyGraph) {
-
     /**
      * Perform topological sort using Kahn's algorithm
      * Returns null if the graph contains cycles
@@ -99,9 +98,10 @@ class TopologicalSorter(private val graph: DependencyGraph) {
         }
 
         // Use a priority queue based on complexity scores
-        val queue = java.util.PriorityQueue<Module>(
-            compareByDescending { complexityScores[it] ?: 0.0 }
-        )
+        val queue =
+            java.util.PriorityQueue<Module>(
+                compareByDescending { complexityScores[it] ?: 0.0 },
+            )
 
         // Find all modules with out-degree 0 (no dependencies)
         inDegree.filter { it.value == 0 }.forEach { (module, _) ->
@@ -166,10 +166,11 @@ class TopologicalSorter(private val graph: DependencyGraph) {
 
         while (processed.size < graph.size()) {
             // Find all modules with in-degree 0 (considering already processed modules)
-            val currentLayer = inDegree
-                .filter { (module, degree) -> degree == 0 && module !in processed }
-                .keys
-                .toSet()
+            val currentLayer =
+                inDegree
+                    .filter { (module, degree) -> degree == 0 && module !in processed }
+                    .keys
+                    .toSet()
 
             if (currentLayer.isEmpty()) {
                 logger.error { "Failed to create layers: no modules with in-degree 0 found" }
@@ -193,4 +194,3 @@ class TopologicalSorter(private val graph: DependencyGraph) {
         return layers
     }
 }
-

@@ -13,7 +13,6 @@ private val logger = KotlinLogging.logger {}
  * Analyzes source code to extract package and import information
  */
 class SourceCodeAnalyzer {
-
     /**
      * Scan a directory for Kotlin/Java source files and extract modules
      */
@@ -53,7 +52,7 @@ class SourceCodeAnalyzer {
             path = filePath,
             packageName = packageName,
             imports = imports,
-            isKotlin = filePath.extension == "kt"
+            isKotlin = filePath.extension == "kt",
         )
     }
 
@@ -90,13 +89,13 @@ class SourceCodeAnalyzer {
      */
     fun extractModules(sourceFiles: List<SourceFile>): List<Module> {
         val packageGroups = groupByPackage(sourceFiles)
-        
+
         return packageGroups.map { (packageName, files) ->
             val firstFile = files.first()
             Module(
                 name = packageName,
                 path = firstFile.path.parent.toString(),
-                type = ModuleType.PACKAGE
+                type = ModuleType.PACKAGE,
             )
         }
     }
@@ -109,19 +108,20 @@ class SourceCodeAnalyzer {
         val dependencies = mutableListOf<PackageDependency>()
 
         packageGroups.forEach { (packageName, files) ->
-            val importedPackages = files
-                .flatMap { it.imports }
-                .map { extractPackageFromImport(it) }
-                .filter { it != packageName } // Exclude self-dependencies
-                .distinct()
+            val importedPackages =
+                files
+                    .flatMap { it.imports }
+                    .map { extractPackageFromImport(it) }
+                    .filter { it != packageName } // Exclude self-dependencies
+                    .distinct()
 
             importedPackages.forEach { importedPackage ->
                 if (packageGroups.containsKey(importedPackage)) {
                     dependencies.add(
                         PackageDependency(
                             from = packageName,
-                            to = importedPackage
-                        )
+                            to = importedPackage,
+                        ),
                     )
                 }
             }
@@ -147,7 +147,10 @@ class SourceCodeAnalyzer {
     /**
      * Find common package prefixes to group related modules
      */
-    fun findPackagePrefixes(packages: List<String>, minDepth: Int = 2): List<String> {
+    fun findPackagePrefixes(
+        packages: List<String>,
+        minDepth: Int = 2,
+    ): List<String> {
         return packages
             .map { it.split(".").take(minDepth).joinToString(".") }
             .distinct()
@@ -162,7 +165,7 @@ data class SourceFile(
     val path: Path,
     val packageName: String?,
     val imports: List<String>,
-    val isKotlin: Boolean
+    val isKotlin: Boolean,
 )
 
 /**
@@ -170,6 +173,5 @@ data class SourceFile(
  */
 data class PackageDependency(
     val from: String,
-    val to: String
+    val to: String,
 )
-

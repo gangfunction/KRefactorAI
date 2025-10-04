@@ -20,7 +20,7 @@ fun mainAutoAnalysis() {
 
     // Create auto analyzer
     val autoAnalyzer = AutoProjectAnalyzer()
-    
+
     // Check if project can be analyzed
     val projectInfo = autoAnalyzer.getProjectInfo(Path(currentProjectPath))
     println(projectInfo)
@@ -38,7 +38,7 @@ fun mainAutoAnalysis() {
 
     try {
         val result = autoAnalyzer.analyze(Path(currentProjectPath))
-        
+
         println("✅ Analysis Complete!")
         println()
         println(result)
@@ -49,10 +49,11 @@ fun mainAutoAnalysis() {
         println("-".repeat(70))
         println("Total Packages: ${result.graph.getModules().size}")
         println("Total Dependencies: ${result.graph.getDependencies().size}")
-        
+
         if (result.graph.getModules().isNotEmpty()) {
-            val avgDependencies = result.graph.getDependencies().size.toDouble() / 
-                                 result.graph.getModules().size
+            val avgDependencies =
+                result.graph.getDependencies().size.toDouble() /
+                    result.graph.getModules().size
             println("Average Dependencies per Package: ${"%.2f".format(avgDependencies)}")
         }
         println()
@@ -90,14 +91,14 @@ fun mainAutoAnalysis() {
         // Generate refactoring plan
         println("🔧 Generating Refactoring Plan...")
         println()
-        
+
         val refactorAI = KRefactorAI(enableAI = false)
         val plan = refactorAI.quickAnalyze(result.graph)
-        
+
         println("Estimated Refactoring Time: ${plan.estimatedTime}")
         println("Total Complexity: ${"%.2f".format(plan.totalComplexity)}")
         println()
-        
+
         println("Top 10 Priority Packages:")
         println("-".repeat(70))
         plan.modules.take(10).forEach { step ->
@@ -108,7 +109,6 @@ fun mainAutoAnalysis() {
         }
 
         refactorAI.close()
-
     } catch (e: Exception) {
         println("❌ Error during analysis: ${e.message}")
         e.printStackTrace()
@@ -118,4 +118,3 @@ fun mainAutoAnalysis() {
     println("Analysis Complete!")
     println("=".repeat(70))
 }
-

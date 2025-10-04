@@ -1,11 +1,10 @@
 package io.github.gangfunction.krefactorai.analyzer
 
-import kotlin.test.*
 import java.nio.file.Files
 import kotlin.io.path.*
+import kotlin.test.*
 
 class SourceCodeAnalyzerTest {
-
     private lateinit var analyzer: SourceCodeAnalyzer
     private lateinit var tempDir: java.nio.file.Path
 
@@ -22,13 +21,14 @@ class SourceCodeAnalyzerTest {
 
     @Test
     fun `test extract package name from Kotlin code`() {
-        val code = """
+        val code =
+            """
             package com.example.myapp
             
             class MyClass {
                 fun doSomething() {}
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val tempFile = tempDir.resolve("Test.kt")
         tempFile.writeText(code)
@@ -41,7 +41,8 @@ class SourceCodeAnalyzerTest {
 
     @Test
     fun `test extract imports from Kotlin code`() {
-        val code = """
+        val code =
+            """
             package com.example.myapp
             
             import java.util.List
@@ -51,7 +52,7 @@ class SourceCodeAnalyzerTest {
             class MyClass {
                 fun doSomething() {}
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val tempFile = tempDir.resolve("Test.kt")
         tempFile.writeText(code)
@@ -66,13 +67,14 @@ class SourceCodeAnalyzerTest {
 
     @Test
     fun `test extract package name from Java code`() {
-        val code = """
+        val code =
+            """
             package com.example.javaapp;
             
             public class JavaClass {
                 public void doSomething() {}
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val tempFile = tempDir.resolve("Test.java")
         tempFile.writeText(code)
@@ -95,11 +97,12 @@ class SourceCodeAnalyzerTest {
         val file3 = tempDir.resolve("File3.kt")
         file3.writeText("package com.example.pkg2\nclass Class3")
 
-        val sourceFiles = listOf(
-            analyzer.analyzeSourceFile(file1),
-            analyzer.analyzeSourceFile(file2),
-            analyzer.analyzeSourceFile(file3)
-        )
+        val sourceFiles =
+            listOf(
+                analyzer.analyzeSourceFile(file1),
+                analyzer.analyzeSourceFile(file2),
+                analyzer.analyzeSourceFile(file3),
+            )
 
         val grouped = analyzer.groupByPackage(sourceFiles)
 
@@ -116,10 +119,11 @@ class SourceCodeAnalyzerTest {
         val file2 = tempDir.resolve("File2.kt")
         file2.writeText("package com.example.pkg2\nclass Class2")
 
-        val sourceFiles = listOf(
-            analyzer.analyzeSourceFile(file1),
-            analyzer.analyzeSourceFile(file2)
-        )
+        val sourceFiles =
+            listOf(
+                analyzer.analyzeSourceFile(file1),
+                analyzer.analyzeSourceFile(file2),
+            )
 
         val modules = analyzer.extractModules(sourceFiles)
 
@@ -131,22 +135,27 @@ class SourceCodeAnalyzerTest {
     @Test
     fun `test extract dependencies between packages`() {
         val file1 = tempDir.resolve("File1.kt")
-        file1.writeText("""
+        file1.writeText(
+            """
             package com.example.pkg1
             import com.example.pkg2.Class2
             class Class1
-        """.trimIndent())
+            """.trimIndent(),
+        )
 
         val file2 = tempDir.resolve("File2.kt")
-        file2.writeText("""
+        file2.writeText(
+            """
             package com.example.pkg2
             class Class2
-        """.trimIndent())
-
-        val sourceFiles = listOf(
-            analyzer.analyzeSourceFile(file1),
-            analyzer.analyzeSourceFile(file2)
+            """.trimIndent(),
         )
+
+        val sourceFiles =
+            listOf(
+                analyzer.analyzeSourceFile(file1),
+                analyzer.analyzeSourceFile(file2),
+            )
 
         val dependencies = analyzer.extractDependencies(sourceFiles)
 
@@ -173,11 +182,12 @@ class SourceCodeAnalyzerTest {
 
     @Test
     fun `test handle file without package`() {
-        val code = """
+        val code =
+            """
             class MyClass {
                 fun doSomething() {}
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val tempFile = tempDir.resolve("Test.kt")
         tempFile.writeText(code)
@@ -187,4 +197,3 @@ class SourceCodeAnalyzerTest {
         assertNull(sourceFile.packageName)
     }
 }
-

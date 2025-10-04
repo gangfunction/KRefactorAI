@@ -1,13 +1,12 @@
 package io.github.gangfunction.krefactorai.graph
 
 import io.github.gangfunction.krefactorai.model.Dependency
-import io.github.gangfunction.krefactorai.model.DependencyType
 import io.github.gangfunction.krefactorai.model.Module
 import org.jgrapht.Graph
+import org.jgrapht.alg.connectivity.ConnectivityInspector
+import org.jgrapht.alg.cycle.CycleDetector
 import org.jgrapht.graph.DefaultDirectedGraph
 import org.jgrapht.graph.DefaultEdge
-import org.jgrapht.alg.cycle.CycleDetector
-import org.jgrapht.alg.connectivity.ConnectivityInspector
 
 /**
  * Represents a dependency graph using JGraphT
@@ -30,7 +29,7 @@ class DependencyGraph {
         // Ensure both modules exist in the graph
         graph.addVertex(dependency.from)
         graph.addVertex(dependency.to)
-        
+
         // Add edge
         graph.addEdge(dependency.from, dependency.to)
         dependencies.add(dependency)
@@ -69,7 +68,7 @@ class DependencyGraph {
      */
     fun detectCircularDependencies(): List<List<Module>> {
         val cycleDetector = CycleDetector(graph)
-        
+
         if (!cycleDetector.detectCycles()) {
             return emptyList()
         }
@@ -94,31 +93,31 @@ class DependencyGraph {
     private fun findCycleContaining(start: Module): List<Module> {
         val visited = mutableSetOf<Module>()
         val path = mutableListOf<Module>()
-        
+
         fun dfs(current: Module): Boolean {
             if (current in path) {
                 // Found a cycle
                 val cycleStart = path.indexOf(current)
                 return true
             }
-            
+
             if (current in visited) {
                 return false
             }
-            
+
             visited.add(current)
             path.add(current)
-            
+
             for (neighbor in getDependenciesOf(current)) {
                 if (dfs(neighbor)) {
                     return true
                 }
             }
-            
+
             path.removeAt(path.lastIndex)
             return false
         }
-        
+
         dfs(start)
         return if (start in path) {
             val cycleStart = path.indexOf(start)
@@ -196,11 +195,11 @@ class DependencyGraph {
      */
     fun isEmpty(): Boolean = graph.vertexSet().isEmpty()
 
-    override fun toString(): String = buildString {
-        appendLine("DependencyGraph:")
-        appendLine("  Modules: ${graph.vertexSet().size}")
-        appendLine("  Dependencies: ${graph.edgeSet().size}")
-        appendLine("  Circular Dependencies: ${detectCircularDependencies().size}")
-    }
+    override fun toString(): String =
+        buildString {
+            appendLine("DependencyGraph:")
+            appendLine("  Modules: ${graph.vertexSet().size}")
+            appendLine("  Dependencies: ${graph.edgeSet().size}")
+            appendLine("  Circular Dependencies: ${detectCircularDependencies().size}")
+        }
 }
-

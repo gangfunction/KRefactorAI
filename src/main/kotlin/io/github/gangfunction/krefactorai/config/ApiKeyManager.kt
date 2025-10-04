@@ -8,50 +8,50 @@ private val logger = KotlinLogging.logger {}
  * Manages OpenAI API key from environment variables
  */
 object ApiKeyManager {
-    
     private const val API_KEY_ENV_VAR = "OPENAI_API_KEY"
     private const val SETUP_GUIDE_URL = "https://github.com/gangfunction/KRefactorAI/blob/main/docs/API_KEY_SETUP.md"
-    
+
     /**
      * Get the OpenAI API key from environment variable
      * @throws IllegalStateException if the API key is not set
      */
     fun getApiKey(): String {
         val apiKey = System.getenv(API_KEY_ENV_VAR)
-        
+
         if (apiKey.isNullOrBlank()) {
-            val errorMessage = buildString {
-                appendLine("❌ Error: OPENAI_API_KEY environment variable is not set.")
-                appendLine()
-                appendLine("Please set your OpenAI API key as an environment variable:")
-                appendLine()
-                appendLine("macOS/Linux:")
-                appendLine("  export OPENAI_API_KEY=\"your-api-key-here\"")
-                appendLine()
-                appendLine("Windows (PowerShell):")
-                appendLine("  \$env:OPENAI_API_KEY=\"your-api-key-here\"")
-                appendLine()
-                appendLine("For detailed setup instructions, please visit:")
-                appendLine("  $SETUP_GUIDE_URL")
-            }
-            
+            val errorMessage =
+                buildString {
+                    appendLine("❌ Error: OPENAI_API_KEY environment variable is not set.")
+                    appendLine()
+                    appendLine("Please set your OpenAI API key as an environment variable:")
+                    appendLine()
+                    appendLine("macOS/Linux:")
+                    appendLine("  export OPENAI_API_KEY=\"your-api-key-here\"")
+                    appendLine()
+                    appendLine("Windows (PowerShell):")
+                    appendLine("  \$env:OPENAI_API_KEY=\"your-api-key-here\"")
+                    appendLine()
+                    appendLine("For detailed setup instructions, please visit:")
+                    appendLine("  $SETUP_GUIDE_URL")
+                }
+
             logger.error { "API key not found in environment variables" }
             throw IllegalStateException(errorMessage)
         }
-        
+
         // Validate API key format (basic check)
         if (!isValidApiKeyFormat(apiKey)) {
             logger.warn { "API key format appears invalid" }
             throw IllegalStateException(
                 "Invalid API key format. OpenAI API keys should start with 'sk-' or 'sk-proj-'.\n" +
-                "Please check your API key and refer to: $SETUP_GUIDE_URL"
+                    "Please check your API key and refer to: $SETUP_GUIDE_URL",
             )
         }
-        
+
         logger.info { "✅ API key loaded successfully (${apiKey.take(10)}...)" }
         return apiKey
     }
-    
+
     /**
      * Check if API key is set (without throwing exception)
      */
@@ -59,20 +59,20 @@ object ApiKeyManager {
         val apiKey = System.getenv(API_KEY_ENV_VAR)
         return !apiKey.isNullOrBlank() && isValidApiKeyFormat(apiKey)
     }
-    
+
     /**
      * Get API key status information
      */
     fun getApiKeyStatus(): ApiKeyStatus {
         val apiKey = System.getenv(API_KEY_ENV_VAR)
-        
+
         return when {
             apiKey.isNullOrBlank() -> ApiKeyStatus.NOT_SET
             !isValidApiKeyFormat(apiKey) -> ApiKeyStatus.INVALID_FORMAT
             else -> ApiKeyStatus.VALID
         }
     }
-    
+
     /**
      * Validate API key format (basic check)
      */
@@ -80,17 +80,18 @@ object ApiKeyManager {
         // OpenAI API keys typically start with "sk-" or "sk-proj-"
         return apiKey.startsWith("sk-") && apiKey.length > 20
     }
-    
+
     /**
      * Get setup guide URL
      */
     fun getSetupGuideUrl(): String = SETUP_GUIDE_URL
-    
+
     /**
      * Print API key setup instructions
      */
     fun printSetupInstructions() {
-        println("""
+        println(
+            """
             |
             |╔════════════════════════════════════════════════════════════════╗
             |║           OpenAI API Key Setup Instructions                    ║
@@ -125,9 +126,10 @@ object ApiKeyManager {
             |  - Add .env files to .gitignore
             |  - Use environment variables only
             |
-        """.trimMargin())
+            """.trimMargin(),
+        )
     }
-    
+
     /**
      * Mask API key for logging (show only first 10 characters)
      */
@@ -146,16 +148,17 @@ object ApiKeyManager {
 enum class ApiKeyStatus {
     NOT_SET,
     INVALID_FORMAT,
-    VALID;
-    
+    VALID,
+    ;
+
     val isValid: Boolean
         get() = this == VALID
-    
-    val message: String
-        get() = when (this) {
-            NOT_SET -> "API key is not set in environment variables"
-            INVALID_FORMAT -> "API key format is invalid"
-            VALID -> "API key is valid"
-        }
-}
 
+    val message: String
+        get() =
+            when (this) {
+                NOT_SET -> "API key is not set in environment variables"
+                INVALID_FORMAT -> "API key format is invalid"
+                VALID -> "API key is valid"
+            }
+}

@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
 data class Module(
     val name: String,
     val path: String,
-    val type: ModuleType = ModuleType.PACKAGE
+    val type: ModuleType = ModuleType.PACKAGE,
 ) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -30,6 +30,5 @@ enum class ModuleType {
     PACKAGE,
     CLASS,
     GRADLE_MODULE,
-    MAVEN_MODULE
+    MAVEN_MODULE,
 }
-

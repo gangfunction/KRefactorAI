@@ -7,17 +7,16 @@ import java.nio.file.Path
  * Interface for analyzing projects and building dependency graphs
  */
 interface ProjectAnalyzer {
-    
     /**
      * Check if this analyzer can handle the given project
      */
     fun canAnalyze(projectPath: Path): Boolean
-    
+
     /**
      * Analyze the project and build a dependency graph
      */
     fun analyze(projectPath: Path): DependencyGraph
-    
+
     /**
      * Get the type of project this analyzer handles
      */
@@ -31,7 +30,7 @@ enum class ProjectType {
     GRADLE_KOTLIN,
     GRADLE_GROOVY,
     MAVEN,
-    UNKNOWN
+    UNKNOWN,
 }
 
 /**
@@ -43,17 +42,17 @@ data class AnalysisResult(
     val modulesFound: Int,
     val dependenciesFound: Int,
     val warnings: List<String> = emptyList(),
-    val refactoringPlan: io.github.gangfunction.krefactorai.model.RefactoringPlan? = null
+    val refactoringPlan: io.github.gangfunction.krefactorai.model.RefactoringPlan? = null,
 ) {
-    override fun toString(): String = buildString {
-        appendLine("=== Analysis Result ===")
-        appendLine("Project Type: $projectType")
-        appendLine("Modules Found: $modulesFound")
-        appendLine("Dependencies Found: $dependenciesFound")
-        if (warnings.isNotEmpty()) {
-            appendLine("Warnings:")
-            warnings.forEach { appendLine("  - $it") }
+    override fun toString(): String =
+        buildString {
+            appendLine("=== Analysis Result ===")
+            appendLine("Project Type: $projectType")
+            appendLine("Modules Found: $modulesFound")
+            appendLine("Dependencies Found: $dependenciesFound")
+            if (warnings.isNotEmpty()) {
+                appendLine("Warnings:")
+                warnings.forEach { appendLine("  - $it") }
+            }
         }
-    }
 }
-

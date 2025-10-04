@@ -10,7 +10,7 @@ data class Dependency(
     val from: Module,
     val to: Module,
     val weight: Double = 1.0,
-    val type: DependencyType = DependencyType.DIRECT
+    val type: DependencyType = DependencyType.DIRECT,
 ) {
     override fun toString(): String = "$from -> $to (weight=$weight, type=$type)"
 }
@@ -20,8 +20,7 @@ data class Dependency(
  */
 @Serializable
 enum class DependencyType {
-    DIRECT,      // Direct import/dependency
-    TRANSITIVE,  // Indirect dependency
-    CIRCULAR     // Part of a circular dependency
+    DIRECT, // Direct import/dependency
+    TRANSITIVE, // Indirect dependency
+    CIRCULAR, // Part of a circular dependency
 }
-

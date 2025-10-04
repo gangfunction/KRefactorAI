@@ -1,8 +1,11 @@
 # KRefactorAI
 
+[![CI](https://github.com/gangfunction/KRefactorAI/workflows/CI/badge.svg)](https://github.com/gangfunction/KRefactorAI/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/gangfunction/KRefactorAI/workflows/CodeQL%20Security%20Analysis/badge.svg)](https://github.com/gangfunction/KRefactorAI/actions/workflows/codeql.yml)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.9.22-blue.svg)](https://kotlinlang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
+[![codecov](https://codecov.io/gh/gangfunction/KRefactorAI/branch/master/graph/badge.svg)](https://codecov.io/gh/gangfunction/KRefactorAI)
 
 **KRefactorAI: Untangle Dependencies with AI and Math**
 

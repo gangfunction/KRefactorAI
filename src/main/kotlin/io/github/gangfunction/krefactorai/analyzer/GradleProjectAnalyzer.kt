@@ -2,8 +2,6 @@ package io.github.gangfunction.krefactorai.analyzer
 
 import io.github.gangfunction.krefactorai.graph.DependencyGraph
 import io.github.gangfunction.krefactorai.model.Dependency
-import io.github.gangfunction.krefactorai.model.Module
-import io.github.gangfunction.krefactorai.model.ModuleType
 import mu.KotlinLogging
 import java.nio.file.Path
 import kotlin.io.path.*
@@ -14,7 +12,6 @@ private val logger = KotlinLogging.logger {}
  * Analyzes Gradle projects (both Kotlin DSL and Groovy)
  */
 class GradleProjectAnalyzer : ProjectAnalyzer {
-
     private val sourceCodeAnalyzer = SourceCodeAnalyzer()
 
     override fun canAnalyze(projectPath: Path): Boolean {
@@ -24,7 +21,7 @@ class GradleProjectAnalyzer : ProjectAnalyzer {
         val settingsGradle = projectPath.resolve("settings.gradle")
 
         return buildGradleKts.exists() || buildGradle.exists() ||
-               settingsGradleKts.exists() || settingsGradle.exists()
+            settingsGradleKts.exists() || settingsGradle.exists()
     }
 
     override fun analyze(projectPath: Path): DependencyGraph {
@@ -72,14 +69,15 @@ class GradleProjectAnalyzer : ProjectAnalyzer {
             GradleModuleInfo(
                 name = projectPath.fileName.toString(),
                 path = projectPath,
-                isRoot = true
-            )
+                isRoot = true,
+            ),
         )
 
         // Find submodules from settings.gradle.kts or settings.gradle
-        val settingsFile = projectPath.resolve("settings.gradle.kts")
-            .takeIf { it.exists() }
-            ?: projectPath.resolve("settings.gradle").takeIf { it.exists() }
+        val settingsFile =
+            projectPath.resolve("settings.gradle.kts")
+                .takeIf { it.exists() }
+                ?: projectPath.resolve("settings.gradle").takeIf { it.exists() }
 
         if (settingsFile != null) {
             val submodules = parseSettingsFile(settingsFile, projectPath)
@@ -92,13 +90,16 @@ class GradleProjectAnalyzer : ProjectAnalyzer {
     /**
      * Parse settings.gradle.kts or settings.gradle to find submodules
      */
-    private fun parseSettingsFile(settingsFile: Path, projectPath: Path): List<GradleModuleInfo> {
+    private fun parseSettingsFile(
+        settingsFile: Path,
+        projectPath: Path,
+    ): List<GradleModuleInfo> {
         val content = settingsFile.readText()
         val modules = mutableListOf<GradleModuleInfo>()
 
         // Match include("module-name") or include(":module-name")
         val includeRegex = Regex("""include\s*\(\s*["']([^"']+)["']\s*\)""")
-        
+
         includeRegex.findAll(content).forEach { match ->
             val moduleName = match.groupValues[1].removePrefix(":")
             val modulePath = projectPath.resolve(moduleName.replace(":", "/"))
@@ -108,8 +109,8 @@ class GradleProjectAnalyzer : ProjectAnalyzer {
                     GradleModuleInfo(
                         name = moduleName,
                         path = modulePath,
-                        isRoot = false
-                    )
+                        isRoot = false,
+                    ),
                 )
             }
         }
@@ -121,7 +122,10 @@ class GradleProjectAnalyzer : ProjectAnalyzer {
     /**
      * Analyze a single Gradle module
      */
-    private fun analyzeModule(moduleInfo: GradleModuleInfo, graph: DependencyGraph) {
+    private fun analyzeModule(
+        moduleInfo: GradleModuleInfo,
+        graph: DependencyGraph,
+    ) {
         logger.debug { "Analyzing module: ${moduleInfo.name}" }
 
         // Find source directories
@@ -165,11 +169,12 @@ class GradleProjectAnalyzer : ProjectAnalyzer {
         val srcDirs = mutableListOf<Path>()
 
         // Standard Gradle source directories
-        val standardPaths = listOf(
-            "src/main/kotlin",
-            "src/main/java",
-            "src/main/groovy"
-        )
+        val standardPaths =
+            listOf(
+                "src/main/kotlin",
+                "src/main/java",
+                "src/main/groovy",
+            )
 
         standardPaths.forEach { relativePath ->
             val srcPath = modulePath.resolve(relativePath)
@@ -210,6 +215,5 @@ class GradleProjectAnalyzer : ProjectAnalyzer {
 data class GradleModuleInfo(
     val name: String,
     val path: Path,
-    val isRoot: Boolean
+    val isRoot: Boolean,
 )
-

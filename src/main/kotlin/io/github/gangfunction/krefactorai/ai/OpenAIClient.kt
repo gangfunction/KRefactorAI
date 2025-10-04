@@ -24,35 +24,37 @@ private val logger = KotlinLogging.logger {}
 class OpenAIClient(
     private val apiKey: String = ApiKeyManager.getApiKey(),
     private val model: String = "gpt-4",
-    private val timeoutMillis: Long = 30_000
+    private val timeoutMillis: Long = 30_000,
 ) {
-    
-    private val client = HttpClient(CIO) {
-        install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-                prettyPrint = true
-            })
+    private val client =
+        HttpClient(CIO) {
+            install(ContentNegotiation) {
+                json(
+                    Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                        prettyPrint = true
+                    },
+                )
+            }
+
+            install(Logging) {
+                logger = Logger.DEFAULT
+                level = LogLevel.INFO
+            }
+
+            install(HttpTimeout) {
+                requestTimeoutMillis = timeoutMillis
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = timeoutMillis
+            }
+
+            defaultRequest {
+                url("https://api.openai.com/v1/")
+                header("Authorization", "Bearer $apiKey")
+                header("Content-Type", "application/json")
+            }
         }
-        
-        install(Logging) {
-            logger = Logger.DEFAULT
-            level = LogLevel.INFO
-        }
-        
-        install(HttpTimeout) {
-            requestTimeoutMillis = timeoutMillis
-            connectTimeoutMillis = 10_000
-            socketTimeoutMillis = timeoutMillis
-        }
-        
-        defaultRequest {
-            url("https://api.openai.com/v1/")
-            header("Authorization", "Bearer $apiKey")
-            header("Content-Type", "application/json")
-        }
-    }
 
     /**
      * Generate refactoring suggestion using OpenAI API
@@ -61,68 +63,72 @@ class OpenAIClient(
         moduleName: String,
         dependencies: List<String>,
         dependents: List<String>,
-        complexityScore: Double
+        complexityScore: Double,
     ): String {
         logger.info { "Generating refactoring suggestion for module: $moduleName" }
-        
+
         val prompt = buildPrompt(moduleName, dependencies, dependents, complexityScore)
-        
+
         return try {
-            withTimeout(timeoutMillis) {
-                val response = client.post("chat/completions") {
-                    setBody(ChatCompletionRequest(
-                        model = model,
-                        messages = listOf(
-                            ChatMessage(
-                                role = "system",
-                                content = """You are a senior Kotlin architect creating actionable refactoring checklists.
-                                    |
-                                    |Output Format Requirements:
-                                    |1. Use GitHub-flavored Markdown with task lists
-                                    |2. Each action must be a checkbox item: - [ ] Action description
-                                    |3. Include specific Kotlin code patterns and examples
-                                    |4. Organize into clear sections with ### headers
-                                    |5. Keep total response under 400 words
-                                    |
-                                    |Required Sections:
-                                    |### 🎯 Refactoring Actions
-                                    |- [ ] Specific action with Kotlin pattern (e.g., Extract interface, Use sealed class)
-                                    |- [ ] Another specific action
-                                    |
-                                    |### 📝 Implementation Steps
-                                    |- [ ] Step 1: Concrete action
-                                    |- [ ] Step 2: Concrete action
-                                    |
-                                    |### ⚠️ Risks & Mitigation
-                                    |- [ ] Risk to watch for
-                                    |- [ ] Mitigation strategy
-                                    |
-                                    |Include brief Kotlin code examples in ```kotlin blocks when helpful.
-                                    |Be specific, actionable, and concise.
-                                    """.trimMargin()
-                            ),
-                            ChatMessage(
-                                role = "user",
-                                content = prompt
-                            )
-                        ),
-                        temperature = 0.3,
-                        maxTokens = 600
-                    ))
-                }
-                
-                val completion: ChatCompletionResponse = response.body()
-                val suggestion = completion.choices.firstOrNull()?.message?.content
-                    ?: "No suggestion generated"
-                
-                logger.info { "Successfully generated suggestion for $moduleName" }
-                suggestion
-            }
+            val suggestion = callOpenAIAPI(prompt)
+            logger.info { "Successfully generated suggestion for $moduleName" }
+            suggestion
         } catch (e: Exception) {
             logger.error(e) { "Failed to generate suggestion for $moduleName" }
             "Error generating suggestion: ${e.message}"
         }
     }
+
+    private suspend fun callOpenAIAPI(prompt: String): String =
+        withTimeout(timeoutMillis) {
+            val response =
+                client.post("chat/completions") {
+                    setBody(createChatCompletionRequest(prompt))
+                }
+
+            val completion: ChatCompletionResponse = response.body()
+            completion.choices.firstOrNull()?.message?.content ?: "No suggestion generated"
+        }
+
+    private fun createChatCompletionRequest(userPrompt: String) =
+        ChatCompletionRequest(
+            model = model,
+            messages =
+                listOf(
+                    ChatMessage(role = "system", content = getSystemPrompt()),
+                    ChatMessage(role = "user", content = userPrompt),
+                ),
+            temperature = 0.3,
+            maxTokens = 600,
+        )
+
+    private fun getSystemPrompt() =
+        """You are a senior Kotlin architect creating actionable refactoring checklists.
+        |
+        |Output Format Requirements:
+        |1. Use GitHub-flavored Markdown with task lists
+        |2. Each action must be a checkbox item: - [ ] Action description
+        |3. Include specific Kotlin code patterns and examples
+        |4. Organize into clear sections with ### headers
+        |5. Keep total response under 400 words
+        |
+        |Required Sections:
+        |### 🎯 Refactoring Actions
+        |- [ ] Specific action with Kotlin pattern (e.g., Extract interface, Use sealed class)
+        |- [ ] Another specific action
+        |
+        |### 📝 Implementation Steps
+        |- [ ] Step 1: Concrete action
+        |- [ ] Step 2: Concrete action
+        |
+        |### ⚠️ Risks & Mitigation
+        |- [ ] Risk to watch for
+        |- [ ] Mitigation strategy
+        |
+        |Include brief Kotlin code examples in ```kotlin blocks when helpful.
+        |Be specific, actionable, and concise.
+        """.trimMargin()
+
 
     /**
      * Build prompt for refactoring suggestion
@@ -131,18 +137,57 @@ class OpenAIClient(
         moduleName: String,
         dependencies: List<String>,
         dependents: List<String>,
-        complexityScore: Double
-    ): String = buildString {
-        appendLine("# Refactoring Analysis Request")
-        appendLine()
+        complexityScore: Double,
+    ): String =
+        buildString {
+            appendLine("# Refactoring Analysis Request")
+            appendLine()
+            appendPackageInformation(moduleName, dependencies, dependents, complexityScore)
+            appendDependencyDetails(dependencies, dependents)
+            appendAnalysisContext(complexityScore, dependencies, dependents)
+
+            appendLine("## Task")
+            appendLine("Create an actionable refactoring checklist in Markdown format.")
+            appendLine()
+            appendLine("### Required Format:")
+            appendLine("```markdown")
+            appendLine("### 🎯 Refactoring Actions")
+            appendLine("- [ ] Extract interface for better abstraction")
+            appendLine("- [ ] Use sealed class for type safety")
+            appendLine("- [ ] Apply dependency injection pattern")
+            appendLine()
+            appendLine("### 📝 Implementation Steps")
+            appendLine("- [ ] Step 1: Identify classes to refactor")
+            appendLine("- [ ] Step 2: Create new interfaces/classes")
+            appendLine("- [ ] Step 3: Update dependencies")
+            appendLine("- [ ] Step 4: Run tests and verify")
+            appendLine()
+            appendLine("### ⚠️ Risks & Mitigation")
+            appendLine("- [ ] Risk: Breaking changes → Mitigation: Use deprecation warnings")
+            appendLine("- [ ] Risk: Performance impact → Mitigation: Add benchmarks")
+            appendLine("```")
+            appendLine()
+            appendLine("Include brief Kotlin code examples where helpful. Keep it concise and actionable.")
+        }
+
+    private fun StringBuilder.appendPackageInformation(
+        moduleName: String,
+        dependencies: List<String>,
+        dependents: List<String>,
+        complexityScore: Double,
+    ) {
         appendLine("## Package Information")
         appendLine("- **Name**: `$moduleName`")
         appendLine("- **Complexity Score**: ${"%.2f".format(complexityScore)} (0.0=simple, 1.0=very complex)")
         appendLine("- **Incoming Dependencies**: ${dependents.size} packages depend on this")
         appendLine("- **Outgoing Dependencies**: ${dependencies.size} packages this depends on")
         appendLine()
+    }
 
-        // Detailed dependency information
+    private fun StringBuilder.appendDependencyDetails(
+        dependencies: List<String>,
+        dependents: List<String>,
+    ) {
         if (dependencies.isNotEmpty()) {
             appendLine("### Dependencies (what this package uses):")
             dependencies.take(5).forEach { appendLine("  - `$it`") }
@@ -156,68 +201,79 @@ class OpenAIClient(
             if (dependents.size > 5) appendLine("  - ... and ${dependents.size - 5} more")
             appendLine()
         }
-
-        // Context-specific analysis request
-        appendLine("## Analysis Context")
-        when {
-            complexityScore > 0.7 && dependents.size > 3 -> {
-                appendLine("🚨 **CRITICAL REFACTORING NEEDED**")
-                appendLine("- High complexity (${String.format("%.2f", complexityScore)}) + ${dependents.size} dependents")
-                appendLine("- This is a bottleneck in the architecture")
-                appendLine("- Refactoring will impact many packages")
-            }
-            complexityScore > 0.7 -> {
-                appendLine("⚠️ **HIGH COMPLEXITY**")
-                appendLine("- Complexity score: ${String.format("%.2f", complexityScore)}")
-                appendLine("- Needs simplification and decomposition")
-            }
-            dependents.size > 5 -> {
-                appendLine("⚠️ **CORE INFRASTRUCTURE PACKAGE**")
-                appendLine("- ${dependents.size} packages depend on this")
-                appendLine("- Changes must maintain backward compatibility")
-                appendLine("- Consider extracting stable interfaces")
-            }
-            dependencies.size > 5 -> {
-                appendLine("⚠️ **TOO MANY DEPENDENCIES**")
-                appendLine("- Depends on ${dependencies.size} packages")
-                appendLine("- Likely violates Single Responsibility Principle")
-                appendLine("- Consider splitting into focused modules")
-            }
-            dependencies.isEmpty() && dependents.isEmpty() -> {
-                appendLine("ℹ️ **ISOLATED PACKAGE**")
-                appendLine("- No dependencies or dependents")
-                appendLine("- Safe to refactor or potentially remove")
-            }
-            else -> {
-                appendLine("✅ **STANDARD PACKAGE**")
-                appendLine("- Moderate complexity and coupling")
-            }
-        }
-        appendLine()
-
-        appendLine("## Task")
-        appendLine("Create an actionable refactoring checklist in Markdown format.")
-        appendLine()
-        appendLine("### Required Format:")
-        appendLine("```markdown")
-        appendLine("### 🎯 Refactoring Actions")
-        appendLine("- [ ] Extract interface for better abstraction")
-        appendLine("- [ ] Use sealed class for type safety")
-        appendLine("- [ ] Apply dependency injection pattern")
-        appendLine()
-        appendLine("### 📝 Implementation Steps")
-        appendLine("- [ ] Step 1: Identify classes to refactor")
-        appendLine("- [ ] Step 2: Create new interfaces/classes")
-        appendLine("- [ ] Step 3: Update dependencies")
-        appendLine("- [ ] Step 4: Run tests and verify")
-        appendLine()
-        appendLine("### ⚠️ Risks & Mitigation")
-        appendLine("- [ ] Risk: Breaking changes → Mitigation: Use deprecation warnings")
-        appendLine("- [ ] Risk: Performance impact → Mitigation: Add benchmarks")
-        appendLine("```")
-        appendLine()
-        appendLine("Include brief Kotlin code examples where helpful. Keep it concise and actionable.")
     }
+
+    private fun StringBuilder.appendAnalysisContext(
+        complexityScore: Double,
+        dependencies: List<String>,
+        dependents: List<String>,
+    ) {
+        appendLine("## Analysis Context")
+        val contextMessage = determineContextMessage(complexityScore, dependencies.size, dependents.size)
+        appendLine(contextMessage)
+        appendLine()
+    }
+
+    @Suppress("MagicNumber")
+    private fun determineContextMessage(
+        complexityScore: Double,
+        dependenciesCount: Int,
+        dependentsCount: Int,
+    ): String =
+        when {
+            complexityScore > 0.7 && dependentsCount > 3 -> buildCriticalMessage(complexityScore, dependentsCount)
+            complexityScore > 0.7 -> buildHighComplexityMessage(complexityScore)
+            dependentsCount > 5 -> buildCoreInfrastructureMessage(dependentsCount)
+            dependenciesCount > 5 -> buildTooManyDependenciesMessage(dependenciesCount)
+            dependenciesCount == 0 && dependentsCount == 0 -> buildIsolatedMessage()
+            else -> buildStandardMessage()
+        }
+
+    private fun buildCriticalMessage(
+        complexityScore: Double,
+        dependentsCount: Int,
+    ) = """
+        🚨 **CRITICAL REFACTORING NEEDED**
+        - High complexity (${"%.2f".format(complexityScore)}) + $dependentsCount dependents
+        - This is a bottleneck in the architecture
+        - Refactoring will impact many packages
+    """.trimIndent()
+
+    private fun buildHighComplexityMessage(complexityScore: Double) =
+        """
+        ⚠️ **HIGH COMPLEXITY**
+        - Complexity score: ${"%.2f".format(complexityScore)}
+        - Needs simplification and decomposition
+        """.trimIndent()
+
+    private fun buildCoreInfrastructureMessage(dependentsCount: Int) =
+        """
+        ⚠️ **CORE INFRASTRUCTURE PACKAGE**
+        - $dependentsCount packages depend on this
+        - Changes must maintain backward compatibility
+        - Consider extracting stable interfaces
+        """.trimIndent()
+
+    private fun buildTooManyDependenciesMessage(dependenciesCount: Int) =
+        """
+        ⚠️ **TOO MANY DEPENDENCIES**
+        - Depends on $dependenciesCount packages
+        - Likely violates Single Responsibility Principle
+        - Consider splitting into focused modules
+        """.trimIndent()
+
+    private fun buildIsolatedMessage() =
+        """
+        ℹ️ **ISOLATED PACKAGE**
+        - No dependencies or dependents
+        - Safe to refactor or potentially remove
+        """.trimIndent()
+
+    private fun buildStandardMessage() =
+        """
+        ✅ **STANDARD PACKAGE**
+        - Moderate complexity and coupling
+        """.trimIndent()
 
     /**
      * Test API connection
@@ -225,15 +281,19 @@ class OpenAIClient(
     suspend fun testConnection(): Boolean {
         return try {
             withTimeout(10_000) {
-                val response = client.post("chat/completions") {
-                    setBody(ChatCompletionRequest(
-                        model = model,
-                        messages = listOf(
-                            ChatMessage(role = "user", content = "Hello")
-                        ),
-                        maxTokens = 5
-                    ))
-                }
+                val response =
+                    client.post("chat/completions") {
+                        setBody(
+                            ChatCompletionRequest(
+                                model = model,
+                                messages =
+                                    listOf(
+                                        ChatMessage(role = "user", content = "Hello"),
+                                    ),
+                                maxTokens = 5,
+                            ),
+                        )
+                    }
                 response.status == HttpStatusCode.OK
             }
         } catch (e: Exception) {
@@ -258,20 +318,20 @@ data class ChatCompletionRequest(
     val messages: List<ChatMessage>,
     val temperature: Double = 0.7,
     @SerialName("max_tokens")
-    val maxTokens: Int = 500
+    val maxTokens: Int = 500,
 )
 
 @Serializable
 data class ChatMessage(
     val role: String,
-    val content: String
+    val content: String,
 )
 
 @Serializable
 data class ChatCompletionResponse(
     val id: String,
     val choices: List<Choice>,
-    val usage: Usage? = null
+    val usage: Usage? = null,
 )
 
 @Serializable
@@ -279,7 +339,7 @@ data class Choice(
     val index: Int,
     val message: ChatMessage,
     @SerialName("finish_reason")
-    val finishReason: String
+    val finishReason: String,
 )
 
 @Serializable
@@ -289,6 +349,5 @@ data class Usage(
     @SerialName("completion_tokens")
     val completionTokens: Int,
     @SerialName("total_tokens")
-    val totalTokens: Int
+    val totalTokens: Int,
 )
-

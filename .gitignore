@@ -50,5 +50,14 @@ test-reports/
 # Generated refactoring plans
 REFACTORING_PLAN_*.md
 
+# Code quality reports
+detekt-report.html
+detekt-report.xml
+ktlint-report.txt
+
+# Coverage reports
+.jacoco/
+jacoco.exec
+
 REQUIREMENTS.md
 PROJECT_SUMMARY.md

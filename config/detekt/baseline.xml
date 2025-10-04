@@ -1,0 +1,41 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:MainAuto.kt$fun main(args: Array&lt;String&gt;)</ID>
+    <ID>CyclomaticComplexMethod:OpenAIClient.kt$OpenAIClient$private fun buildPrompt( moduleName: String, dependencies: List&lt;String&gt;, dependents: List&lt;String&gt;, complexityScore: Double ): String</ID>
+    <ID>ImplicitDefaultLocale:OpenAIClient.kt$OpenAIClient$String.format("%.2f", complexityScore)</ID>
+    <ID>LongMethod:AutoAnalysisExample.kt$fun mainAutoAnalysis()</ID>
+    <ID>LongMethod:MainAuto.kt$fun main(args: Array&lt;String&gt;)</ID>
+    <ID>LongMethod:MainAuto.kt$fun saveRefactoringPlanToMarkdown(plan: io.github.gangfunction.krefactorai.model.RefactoringPlan, projectPath: String): String</ID>
+    <ID>LongMethod:OpenAIClient.kt$OpenAIClient$private fun buildPrompt( moduleName: String, dependencies: List&lt;String&gt;, dependents: List&lt;String&gt;, complexityScore: Double ): String</ID>
+    <ID>MaxLineLength:MainAuto.kt$fun</ID>
+    <ID>MaxLineLength:OpenAIClient.kt$OpenAIClient$appendLine("- High complexity (${String.format("%.2f", complexityScore)}) + ${dependents.size} dependents")</ID>
+    <ID>MaxLineLength:RefactoringPlan.kt$RefactoringPlan$appendLine("${index + 1}. ${step.module.name} (priority=${step.priority}, complexity=${"%.2f".format(step.complexityScore)})")</ID>
+    <ID>NestedBlockDepth:MainAuto.kt$fun main(args: Array&lt;String&gt;)</ID>
+    <ID>NestedBlockDepth:TopologicalSorter.kt$TopologicalSorter$fun getLayers(): List&lt;Set&lt;Module&gt;&gt;?</ID>
+    <ID>NestedBlockDepth:TopologicalSorter.kt$TopologicalSorter$fun sort(): List&lt;Module&gt;?</ID>
+    <ID>NestedBlockDepth:TopologicalSorter.kt$TopologicalSorter$fun sortWithPriority(complexityScores: Map&lt;Module, Double&gt;): List&lt;Module&gt;?</ID>
+    <ID>PrintStackTrace:AutoAnalysisExample.kt$e</ID>
+    <ID>PrintStackTrace:MainAuto.kt$e</ID>
+    <ID>ReturnCount:DependencyGraph.kt$DependencyGraph$fun dfs(current: Module): Boolean</ID>
+    <ID>ReturnCount:KRefactorAI.kt$KRefactorAI$fun analyze(graph: DependencyGraph, includeAISuggestions: Boolean = enableAI): RefactoringPlan</ID>
+    <ID>ReturnCount:MinimalPolynomial.kt$MinimalPolynomial$fun calculateCharacteristicPolynomial(adjacencyMatrix: Array&lt;DoubleArray&gt;): DoubleArray</ID>
+    <ID>ReturnCount:MinimalPolynomial.kt$MinimalPolynomial$fun calculateComplexityScores(adjacencyMatrix: Array&lt;DoubleArray&gt;): DoubleArray</ID>
+    <ID>ReturnCount:TopologicalSorter.kt$TopologicalSorter$fun getLayers(): List&lt;Set&lt;Module&gt;&gt;?</ID>
+    <ID>ReturnCount:TopologicalSorter.kt$TopologicalSorter$fun sort(): List&lt;Module&gt;?</ID>
+    <ID>ReturnCount:TopologicalSorter.kt$TopologicalSorter$fun sortWithPriority(complexityScores: Map&lt;Module, Double&gt;): List&lt;Module&gt;?</ID>
+    <ID>ThrowsCount:AutoProjectAnalyzer.kt$AutoProjectAnalyzer$fun analyze(projectPath: Path): AnalysisResult</ID>
+    <ID>TooGenericExceptionCaught:AutoAnalysisExample.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:AutoProjectAnalyzer.kt$AutoProjectAnalyzer$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:KRefactorAI.kt$KRefactorAI$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:MainAuto.kt$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:MinimalPolynomial.kt$MinimalPolynomial$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:OpenAIClient.kt$OpenAIClient$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:SourceCodeAnalyzer.kt$SourceCodeAnalyzer$e: Exception</ID>
+    <ID>TooManyFunctions:DependencyGraph.kt$DependencyGraph</ID>
+    <ID>TooManyFunctions:KRefactorAI.kt$KRefactorAI</ID>
+    <ID>UnusedPrivateMember:GradleProjectAnalyzer.kt$GradleProjectAnalyzer$private fun parseModuleDependencies(buildFile: Path): List&lt;String&gt;</ID>
+    <ID>UnusedPrivateProperty:GradleProjectAnalyzer.kt$GradleProjectAnalyzer$val projectType = detectProjectType(projectPath)</ID>
+  </CurrentIssues>
+</SmellBaseline>

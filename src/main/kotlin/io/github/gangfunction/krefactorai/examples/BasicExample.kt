@@ -17,13 +17,13 @@ fun mainBasicExample() {
 
     // Create KRefactorAI instance
     val refactorAI = KRefactorAI(enableAI = false) // Set to true to enable AI suggestions
-    
+
     println("📊 Creating dependency graph...")
     println()
 
     // Create a dependency graph
     val graph = createSampleGraph()
-    
+
     println("Graph created with:")
     println("  - Modules: ${graph.getModules().size}")
     println("  - Dependencies: ${graph.getDependencies().size}")
@@ -32,13 +32,13 @@ fun mainBasicExample() {
     // Analyze the graph
     println("🔍 Analyzing dependencies...")
     println()
-    
+
     val plan = refactorAI.quickAnalyze(graph)
-    
+
     // Print results
     println(plan)
     println()
-    
+
     // Check for circular dependencies
     if (plan.circularDependencies.isNotEmpty()) {
         println("⚠️  Warning: Circular dependencies detected!")
@@ -50,7 +50,7 @@ fun mainBasicExample() {
         println("✅ No circular dependencies found")
         println()
     }
-    
+
     // Print refactoring order
     println("📋 Recommended Refactoring Order:")
     println("-".repeat(70))
@@ -61,7 +61,7 @@ fun mainBasicExample() {
         println("   Dependents: ${step.dependents.size}")
         println()
     }
-    
+
     // Get refactoring layers
     println("🔄 Parallel Refactoring Layers:")
     println("-".repeat(70))
@@ -70,10 +70,10 @@ fun mainBasicExample() {
         println("Layer ${index + 1}: ${layer.joinToString(", ") { it.name }}")
     }
     println()
-    
+
     // Cleanup
     refactorAI.close()
-    
+
     println("=".repeat(70))
     println("Analysis complete!")
     println("=".repeat(70))
@@ -84,7 +84,7 @@ fun mainBasicExample() {
  */
 fun createSampleGraph(): DependencyGraph {
     val graph = DependencyGraph()
-    
+
     // Create modules representing a typical application structure
     val ui = Module("UI", "/src/ui", ModuleType.PACKAGE)
     val controller = Module("Controller", "/src/controller", ModuleType.PACKAGE)
@@ -92,26 +92,25 @@ fun createSampleGraph(): DependencyGraph {
     val repository = Module("Repository", "/src/repository", ModuleType.PACKAGE)
     val model = Module("Model", "/src/model", ModuleType.PACKAGE)
     val utils = Module("Utils", "/src/utils", ModuleType.PACKAGE)
-    
+
     // Add modules to graph
     listOf(ui, controller, service, repository, model, utils).forEach {
         graph.addModule(it)
     }
-    
+
     // Define dependencies (A -> B means A depends on B)
     graph.addDependency(Dependency(ui, controller))
     graph.addDependency(Dependency(ui, model))
-    
+
     graph.addDependency(Dependency(controller, service))
     graph.addDependency(Dependency(controller, model))
-    
+
     graph.addDependency(Dependency(service, repository))
     graph.addDependency(Dependency(service, model))
     graph.addDependency(Dependency(service, utils))
-    
+
     graph.addDependency(Dependency(repository, model))
     graph.addDependency(Dependency(repository, utils))
-    
+
     return graph
 }
-

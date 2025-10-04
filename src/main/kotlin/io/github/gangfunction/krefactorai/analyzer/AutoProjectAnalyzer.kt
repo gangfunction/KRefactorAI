@@ -11,11 +11,11 @@ private val logger = KotlinLogging.logger {}
  * Automatically detects project type and analyzes it
  */
 class AutoProjectAnalyzer {
-
-    private val analyzers = listOf(
-        GradleProjectAnalyzer(),
-        MavenProjectAnalyzer()
-    )
+    private val analyzers =
+        listOf(
+            GradleProjectAnalyzer(),
+            MavenProjectAnalyzer(),
+        )
 
     /**
      * Automatically detect and analyze a project
@@ -32,8 +32,9 @@ class AutoProjectAnalyzer {
         }
 
         // Find suitable analyzer
-        val analyzer = findAnalyzer(projectPath)
-            ?: throw IllegalStateException("No suitable analyzer found for project at: $projectPath")
+        val analyzer =
+            findAnalyzer(projectPath)
+                ?: throw IllegalStateException("No suitable analyzer found for project at: $projectPath")
 
         logger.info { "Using ${analyzer.getProjectType()} analyzer" }
 
@@ -41,13 +42,14 @@ class AutoProjectAnalyzer {
         val graph = analyzer.analyze(projectPath)
 
         // Create result
-        val result = AnalysisResult(
-            graph = graph,
-            projectType = analyzer.getProjectType(),
-            modulesFound = graph.getModules().size,
-            dependenciesFound = graph.getDependencies().size,
-            warnings = collectWarnings(graph)
-        )
+        val result =
+            AnalysisResult(
+                graph = graph,
+                projectType = analyzer.getProjectType(),
+                modulesFound = graph.getModules().size,
+                dependenciesFound = graph.getDependencies().size,
+                warnings = collectWarnings(graph),
+            )
 
         logger.info { "Analysis complete: ${result.modulesFound} modules, ${result.dependenciesFound} dependencies" }
         return result
@@ -93,9 +95,10 @@ class AutoProjectAnalyzer {
         }
 
         // Check for isolated modules
-        val isolatedModules = graph.getModules().filter { module ->
-            graph.getInDegree(module) == 0 && graph.getOutDegree(module) == 0
-        }
+        val isolatedModules =
+            graph.getModules().filter { module ->
+                graph.getInDegree(module) == 0 && graph.getOutDegree(module) == 0
+            }
         if (isolatedModules.isNotEmpty()) {
             warnings.add("Found ${isolatedModules.size} isolated modules (no dependencies)")
         }
@@ -116,14 +119,14 @@ class AutoProjectAnalyzer {
         projectPaths.forEach { projectPath ->
             try {
                 val result = analyze(projectPath)
-                
+
                 // Merge graphs
                 result.graph.getModules().forEach { mergedGraph.addModule(it) }
                 result.graph.getDependencies().forEach { mergedGraph.addDependency(it) }
-                
+
                 // Collect warnings
                 allWarnings.addAll(result.warnings)
-                
+
                 // Use first detected project type
                 if (projectType == ProjectType.UNKNOWN) {
                     projectType = result.projectType
@@ -139,7 +142,7 @@ class AutoProjectAnalyzer {
             projectType = projectType,
             modulesFound = mergedGraph.getModules().size,
             dependenciesFound = mergedGraph.getDependencies().size,
-            warnings = allWarnings
+            warnings = allWarnings,
         )
     }
 
@@ -154,7 +157,7 @@ class AutoProjectAnalyzer {
             path = projectPath,
             type = projectType,
             canAnalyze = canAnalyze,
-            name = projectPath.fileName.toString()
+            name = projectPath.fileName.toString(),
         )
     }
 }
@@ -166,13 +169,13 @@ data class ProjectInfo(
     val path: Path,
     val type: ProjectType,
     val canAnalyze: Boolean,
-    val name: String
+    val name: String,
 ) {
-    override fun toString(): String = buildString {
-        appendLine("Project: $name")
-        appendLine("Path: $path")
-        appendLine("Type: $type")
-        appendLine("Can Analyze: $canAnalyze")
-    }
+    override fun toString(): String =
+        buildString {
+            appendLine("Project: $name")
+            appendLine("Path: $path")
+            appendLine("Type: $type")
+            appendLine("Can Analyze: $canAnalyze")
+        }
 }
-

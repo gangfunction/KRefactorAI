@@ -14,22 +14,21 @@ private val logger = KotlinLogging.logger {}
  */
 class RefactoringOrderCalculator(
     private val graph: DependencyGraph,
-    private val minimalPolynomial: MinimalPolynomial = MinimalPolynomial()
+    private val minimalPolynomial: MinimalPolynomial = MinimalPolynomial(),
 ) {
-
     /**
      * Calculate the complete refactoring plan
      */
     fun calculateRefactoringOrder(): RefactoringPlan {
         logger.info { "Starting refactoring order calculation" }
-        
+
         if (graph.isEmpty()) {
             logger.warn { "Empty dependency graph" }
             return RefactoringPlan(
                 modules = emptyList(),
                 circularDependencies = emptyList(),
                 totalComplexity = 0.0,
-                estimatedTime = "0 minutes"
+                estimatedTime = "0 minutes",
             )
         }
 
@@ -46,24 +45,26 @@ class RefactoringOrderCalculator(
         val adjacencyMatrix = graph.toAdjacencyMatrix()
         val complexityScores = minimalPolynomial.calculateComplexityScores(adjacencyMatrix)
         val moduleIndexMap = graph.getModuleIndexMap()
-        
+
         // Create complexity map
-        val complexityMap = moduleIndexMap.entries.associate { (module, index) ->
-            module to complexityScores.getOrElse(index) { 0.5 }
-        }
+        val complexityMap =
+            moduleIndexMap.entries.associate { (module, index) ->
+                module to complexityScores.getOrElse(index) { 0.5 }
+            }
 
         // Step 3: Perform topological sort with priority
         val sorter = TopologicalSorter(graph)
         val sortedModules = sorter.sortWithPriority(complexityMap)
 
         // Step 4: Create refactoring steps
-        val steps = if (sortedModules != null) {
-            createRefactoringSteps(sortedModules, complexityMap)
-        } else {
-            // If topological sort fails (due to cycles), create steps without ordering
-            logger.warn { "Topological sort failed, creating unordered steps" }
-            createUnorderedSteps(complexityMap)
-        }
+        val steps =
+            if (sortedModules != null) {
+                createRefactoringSteps(sortedModules, complexityMap)
+            } else {
+                // If topological sort fails (due to cycles), create steps without ordering
+                logger.warn { "Topological sort failed, creating unordered steps" }
+                createUnorderedSteps(complexityMap)
+            }
 
         // Step 5: Calculate total complexity and estimated time
         val totalComplexity = steps.sumOf { it.complexityScore }
@@ -79,7 +80,7 @@ class RefactoringOrderCalculator(
             modules = steps,
             circularDependencies = circularDeps,
             totalComplexity = totalComplexity,
-            estimatedTime = estimatedTime
+            estimatedTime = estimatedTime,
         )
     }
 
@@ -88,7 +89,7 @@ class RefactoringOrderCalculator(
      */
     private fun createRefactoringSteps(
         sortedModules: List<Module>,
-        complexityMap: Map<Module, Double>
+        complexityMap: Map<Module, Double>,
     ): List<RefactoringStep> {
         return sortedModules.mapIndexed { index, module ->
             RefactoringStep(
@@ -97,7 +98,7 @@ class RefactoringOrderCalculator(
                 complexityScore = complexityMap[module] ?: 0.5,
                 dependencies = graph.getDependenciesOf(module).toList(),
                 dependents = graph.getDependentsOf(module).toList(),
-                aiSuggestion = null // Will be filled by AI module
+                aiSuggestion = null, // Will be filled by AI module
             )
         }
     }
@@ -105,9 +106,7 @@ class RefactoringOrderCalculator(
     /**
      * Create unordered steps (when topological sort fails)
      */
-    private fun createUnorderedSteps(
-        complexityMap: Map<Module, Double>
-    ): List<RefactoringStep> {
+    private fun createUnorderedSteps(complexityMap: Map<Module, Double>): List<RefactoringStep> {
         return graph.getModules()
             .sortedByDescending { complexityMap[it] ?: 0.0 }
             .mapIndexed { index, module ->
@@ -117,7 +116,7 @@ class RefactoringOrderCalculator(
                     complexityScore = complexityMap[module] ?: 0.5,
                     dependencies = graph.getDependenciesOf(module).toList(),
                     dependents = graph.getDependentsOf(module).toList(),
-                    aiSuggestion = null
+                    aiSuggestion = null,
                 )
             }
     }
@@ -125,7 +124,10 @@ class RefactoringOrderCalculator(
     /**
      * Estimate time required for refactoring
      */
-    private fun estimateTime(moduleCount: Int, totalComplexity: Double): String {
+    private fun estimateTime(
+        moduleCount: Int,
+        totalComplexity: Double,
+    ): String {
         // Base time: 20 minutes per module
         // Complexity multiplier: 0.5 to 2.0
         val baseMinutes = moduleCount * 20
@@ -162,7 +164,7 @@ class RefactoringOrderCalculator(
     fun calculatePriorityScore(module: Module): Double {
         val inDegree = graph.getInDegree(module).toDouble()
         val outDegree = graph.getOutDegree(module).toDouble()
-        
+
         // Modules with many dependents and few dependencies have higher priority
         return inDegree * 2.0 - outDegree * 0.5
     }
@@ -188,11 +190,12 @@ class RefactoringOrderCalculator(
 
         moduleIndexMap.forEach { (module, index) ->
             val score = complexityScores.getOrElse(index) { 0.5 }
-            val level = when {
-                score < 0.3 -> ComplexityLevel.LOW
-                score < 0.7 -> ComplexityLevel.MEDIUM
-                else -> ComplexityLevel.HIGH
-            }
+            val level =
+                when {
+                    score < 0.3 -> ComplexityLevel.LOW
+                    score < 0.7 -> ComplexityLevel.MEDIUM
+                    else -> ComplexityLevel.HIGH
+                }
             result[level]?.add(module)
         }
 
@@ -206,6 +209,5 @@ class RefactoringOrderCalculator(
 enum class ComplexityLevel {
     LOW,
     MEDIUM,
-    HIGH
+    HIGH,
 }
-

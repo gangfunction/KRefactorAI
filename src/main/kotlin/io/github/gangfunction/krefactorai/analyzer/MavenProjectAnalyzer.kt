@@ -12,7 +12,6 @@ private val logger = KotlinLogging.logger {}
  * Analyzes Maven projects
  */
 class MavenProjectAnalyzer : ProjectAnalyzer {
-
     private val sourceCodeAnalyzer = SourceCodeAnalyzer()
 
     override fun canAnalyze(projectPath: Path): Boolean {
@@ -55,8 +54,8 @@ class MavenProjectAnalyzer : ProjectAnalyzer {
                     name = extractArtifactId(rootPom) ?: projectPath.fileName.toString(),
                     path = projectPath,
                     pomFile = rootPom,
-                    isRoot = true
-                )
+                    isRoot = true,
+                ),
             )
 
             // Find submodules from pom.xml
@@ -70,7 +69,10 @@ class MavenProjectAnalyzer : ProjectAnalyzer {
     /**
      * Parse pom.xml to find submodules
      */
-    private fun parseModulesFromPom(pomFile: Path, projectPath: Path): List<MavenModuleInfo> {
+    private fun parseModulesFromPom(
+        pomFile: Path,
+        projectPath: Path,
+    ): List<MavenModuleInfo> {
         val content = pomFile.readText()
         val modules = mutableListOf<MavenModuleInfo>()
 
@@ -88,8 +90,8 @@ class MavenProjectAnalyzer : ProjectAnalyzer {
                         name = extractArtifactId(modulePom) ?: moduleName,
                         path = modulePath,
                         pomFile = modulePom,
-                        isRoot = false
-                    )
+                        isRoot = false,
+                    ),
                 )
             }
         }
@@ -110,7 +112,10 @@ class MavenProjectAnalyzer : ProjectAnalyzer {
     /**
      * Analyze a single Maven module
      */
-    private fun analyzeModule(moduleInfo: MavenModuleInfo, graph: DependencyGraph) {
+    private fun analyzeModule(
+        moduleInfo: MavenModuleInfo,
+        graph: DependencyGraph,
+    ) {
         logger.debug { "Analyzing module: ${moduleInfo.name}" }
 
         // Find source directories
@@ -154,11 +159,12 @@ class MavenProjectAnalyzer : ProjectAnalyzer {
         val srcDirs = mutableListOf<Path>()
 
         // Standard Maven source directories
-        val standardPaths = listOf(
-            "src/main/kotlin",
-            "src/main/java",
-            "src/main/groovy"
-        )
+        val standardPaths =
+            listOf(
+                "src/main/kotlin",
+                "src/main/java",
+                "src/main/groovy",
+            )
 
         standardPaths.forEach { relativePath ->
             val srcPath = modulePath.resolve(relativePath)
@@ -178,6 +184,5 @@ data class MavenModuleInfo(
     val name: String,
     val path: Path,
     val pomFile: Path,
-    val isRoot: Boolean
+    val isRoot: Boolean,
 )
-
