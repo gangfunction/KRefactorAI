@@ -71,8 +71,16 @@ tasks.jacocoTestCoverageVerification {
     }
 }
 
-kotlin {
-    jvmToolchain(17)
+// Use current JVM instead of toolchain to avoid download issues
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+    kotlinOptions {
+        jvmTarget = "17"
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 ktlint {
