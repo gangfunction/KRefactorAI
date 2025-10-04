@@ -1,6 +1,10 @@
 package io.github.gangfunction.krefactorai
 
 import io.github.gangfunction.krefactorai.analyzer.AutoProjectAnalyzer
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.io.path.Path
 
 /**
@@ -161,6 +165,12 @@ fun main(args: Array<String>) {
             }
         }
 
+        // Save to markdown file
+        println()
+        println("💾 Saving refactoring plan to file...")
+        val outputPath = saveRefactoringPlanToMarkdown(plan, currentProjectPath)
+        println("✅ Saved to: $outputPath")
+
         refactorAI.close()
 
     } catch (e: Exception) {
@@ -170,5 +180,114 @@ fun main(args: Array<String>) {
 
     println()
     println("=".repeat(70))
+}
+
+/**
+ * Save refactoring plan to markdown file
+ */
+fun saveRefactoringPlanToMarkdown(plan: io.github.gangfunction.krefactorai.model.RefactoringPlan, projectPath: String): String {
+    val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss"))
+    val fileName = "REFACTORING_PLAN_$timestamp.md"
+    val outputPath = Paths.get(projectPath, fileName)
+
+    val content = buildString {
+        appendLine("# 🔧 Refactoring Plan")
+        appendLine()
+        appendLine("**Generated**: ${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}")
+        appendLine("**Project**: $projectPath")
+        appendLine()
+
+        appendLine("## 📊 Summary")
+        appendLine()
+        appendLine("- **Total Modules**: ${plan.modules.size}")
+        appendLine("- **Circular Dependencies**: ${plan.circularDependencies}")
+        appendLine("- **Total Complexity**: ${"%.2f".format(plan.totalComplexity)}")
+        appendLine("- **Estimated Time**: ${plan.estimatedTime}")
+        appendLine()
+
+        appendLine("---")
+        appendLine()
+
+        plan.modules.forEach { step ->
+            appendLine("## ${step.priority}. ${step.module.name}")
+            appendLine()
+            appendLine("**Complexity Score**: ${"%.2f".format(step.complexityScore)}")
+            appendLine("**Dependencies**: ${step.dependencies.size} | **Dependents**: ${step.dependents.size}")
+            appendLine()
+
+            if (step.aiSuggestion != null) {
+                appendLine(step.aiSuggestion)
+                appendLine()
+            } else {
+                appendLine("### 💡 Recommendations")
+                appendLine()
+                when {
+                    step.complexityScore > 0.7 -> {
+                        appendLine("- [ ] **HIGH PRIORITY** - This package has high complexity")
+                        appendLine("- [ ] Consider breaking it into smaller modules")
+                        appendLine("- [ ] Review and simplify dependencies")
+                    }
+                    step.dependents.size > 3 -> {
+                        appendLine("- [ ] Many packages depend on this - refactor carefully")
+                        appendLine("- [ ] Ensure backward compatibility")
+                        appendLine("- [ ] Consider creating stable interfaces")
+                    }
+                    step.dependencies.size > 5 -> {
+                        appendLine("- [ ] This package has many dependencies")
+                        appendLine("- [ ] Review if all dependencies are necessary")
+                        appendLine("- [ ] Consider dependency injection")
+                    }
+                    step.dependencies.isEmpty() && step.dependents.isEmpty() -> {
+                        appendLine("- [ ] Isolated package - safe to refactor")
+                        appendLine("- [ ] Consider if this package is still needed")
+                    }
+                    else -> {
+                        appendLine("- [ ] Standard refactoring approach")
+                        appendLine("- [ ] Review code quality and test coverage")
+                    }
+                }
+                appendLine()
+            }
+
+            if (step.dependencies.isNotEmpty()) {
+                appendLine("<details>")
+                appendLine("<summary>📦 Dependencies (${step.dependencies.size})</summary>")
+                appendLine()
+                step.dependencies.forEach { dep ->
+                    appendLine("- `${dep.name}`")
+                }
+                appendLine("</details>")
+                appendLine()
+            }
+
+            if (step.dependents.isNotEmpty()) {
+                appendLine("<details>")
+                appendLine("<summary>👥 Used by (${step.dependents.size})</summary>")
+                appendLine()
+                step.dependents.forEach { dep ->
+                    appendLine("- `${dep.name}`")
+                }
+                appendLine("</details>")
+                appendLine()
+            }
+
+            appendLine("---")
+            appendLine()
+        }
+
+        appendLine("## 📝 Next Steps")
+        appendLine()
+        appendLine("1. Review the refactoring actions for each module")
+        appendLine("2. Check off completed tasks as you progress")
+        appendLine("3. Run tests after each refactoring step")
+        appendLine("4. Update this document with any additional notes")
+        appendLine()
+        appendLine("---")
+        appendLine()
+        appendLine("*Generated by [KRefactorAI](https://github.com/gangfunction/KRefactorAI)*")
+    }
+
+    Files.writeString(outputPath, content)
+    return outputPath.toString()
 }
 

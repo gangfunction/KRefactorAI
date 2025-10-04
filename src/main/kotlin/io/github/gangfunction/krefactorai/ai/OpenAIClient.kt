@@ -75,19 +75,30 @@ class OpenAIClient(
                         messages = listOf(
                             ChatMessage(
                                 role = "system",
-                                content = """You are a senior Kotlin architect with 10+ years of experience in large-scale refactoring.
+                                content = """You are a senior Kotlin architect creating actionable refactoring checklists.
                                     |
-                                    |Your responses MUST:
-                                    |1. Be SPECIFIC - mention exact Kotlin patterns, not generic advice
-                                    |2. Include CODE examples when relevant
-                                    |3. Reference specific refactoring techniques (Extract Interface, Dependency Injection, etc.)
-                                    |4. Consider Kotlin idioms: data classes, sealed classes, extension functions, coroutines
-                                    |5. Provide step-by-step action items
+                                    |Output Format Requirements:
+                                    |1. Use GitHub-flavored Markdown with task lists
+                                    |2. Each action must be a checkbox item: - [ ] Action description
+                                    |3. Include specific Kotlin code patterns and examples
+                                    |4. Organize into clear sections with ### headers
+                                    |5. Keep total response under 400 words
                                     |
-                                    |AVOID:
-                                    |- Generic statements like "improve code quality"
-                                    |- Vague advice without concrete steps
-                                    |- Repeating the problem without solutions
+                                    |Required Sections:
+                                    |### 🎯 Refactoring Actions
+                                    |- [ ] Specific action with Kotlin pattern (e.g., Extract interface, Use sealed class)
+                                    |- [ ] Another specific action
+                                    |
+                                    |### 📝 Implementation Steps
+                                    |- [ ] Step 1: Concrete action
+                                    |- [ ] Step 2: Concrete action
+                                    |
+                                    |### ⚠️ Risks & Mitigation
+                                    |- [ ] Risk to watch for
+                                    |- [ ] Mitigation strategy
+                                    |
+                                    |Include brief Kotlin code examples in ```kotlin blocks when helpful.
+                                    |Be specific, actionable, and concise.
                                     """.trimMargin()
                             ),
                             ChatMessage(
@@ -95,8 +106,8 @@ class OpenAIClient(
                                 content = prompt
                             )
                         ),
-                        temperature = 0.2,
-                        maxTokens = 500
+                        temperature = 0.3,
+                        maxTokens = 600
                     ))
                 }
                 
@@ -184,26 +195,28 @@ class OpenAIClient(
         }
         appendLine()
 
-        appendLine("## Required Output")
-        appendLine("Provide a refactoring plan with:")
+        appendLine("## Task")
+        appendLine("Create an actionable refactoring checklist in Markdown format.")
         appendLine()
-        appendLine("### 1. Specific Refactoring Actions")
-        appendLine("List 2-3 CONCRETE actions with Kotlin code patterns:")
-        appendLine("- Example: \"Extract interface `IUserRepository` from `UserRepository` class\"")
-        appendLine("- Example: \"Split into `UserValidation` and `UserPersistence` packages\"")
-        appendLine("- Example: \"Convert to sealed class hierarchy for type safety\"")
+        appendLine("### Required Format:")
+        appendLine("```markdown")
+        appendLine("### 🎯 Refactoring Actions")
+        appendLine("- [ ] Extract interface for better abstraction")
+        appendLine("- [ ] Use sealed class for type safety")
+        appendLine("- [ ] Apply dependency injection pattern")
         appendLine()
-        appendLine("### 2. Implementation Steps")
-        appendLine("Provide step-by-step instructions:")
-        appendLine("- Step 1: [specific action]")
-        appendLine("- Step 2: [specific action]")
-        appendLine("- Step 3: [specific action]")
+        appendLine("### 📝 Implementation Steps")
+        appendLine("- [ ] Step 1: Identify classes to refactor")
+        appendLine("- [ ] Step 2: Create new interfaces/classes")
+        appendLine("- [ ] Step 3: Update dependencies")
+        appendLine("- [ ] Step 4: Run tests and verify")
         appendLine()
-        appendLine("### 3. Risk Mitigation")
-        appendLine("What specific issues to watch for during refactoring?")
+        appendLine("### ⚠️ Risks & Mitigation")
+        appendLine("- [ ] Risk: Breaking changes → Mitigation: Use deprecation warnings")
+        appendLine("- [ ] Risk: Performance impact → Mitigation: Add benchmarks")
+        appendLine("```")
         appendLine()
-        appendLine("**Format**: Use bullet points. Be specific. Include Kotlin code examples if relevant.")
-        appendLine("**Length**: 200-300 words maximum.")
+        appendLine("Include brief Kotlin code examples where helpful. Keep it concise and actionable.")
     }
 
     /**

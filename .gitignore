@@ -47,5 +47,8 @@ logs/
 test-results/
 test-reports/
 
+# Generated refactoring plans
+REFACTORING_PLAN_*.md
+
 REQUIREMENTS.md
 PROJECT_SUMMARY.md
