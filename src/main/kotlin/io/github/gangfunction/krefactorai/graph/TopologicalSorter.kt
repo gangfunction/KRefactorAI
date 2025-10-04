@@ -30,12 +30,12 @@ class TopologicalSorter(private val graph: DependencyGraph) {
         val result = mutableListOf<Module>()
         val inDegree = mutableMapOf<Module, Int>()
 
-        // Initialize in-degree for all modules
+        // Initialize out-degree for all modules (number of dependencies)
         modules.forEach { module ->
-            inDegree[module] = graph.getInDegree(module)
+            inDegree[module] = graph.getOutDegree(module)
         }
 
-        // Find all modules with in-degree 0 (no dependencies)
+        // Find all modules with out-degree 0 (no dependencies)
         val queue = ArrayDeque<Module>()
         inDegree.filter { it.value == 0 }.forEach { (module, _) ->
             queue.add(module)
@@ -46,20 +46,26 @@ class TopologicalSorter(private val graph: DependencyGraph) {
             val current = queue.removeFirst()
             result.add(current)
 
-            // Reduce in-degree of dependent modules
-            graph.getDependentsOf(current).forEach { dependent ->
-                val newDegree = (inDegree[dependent] ?: 0) - 1
-                inDegree[dependent] = newDegree
+            // Get all modules that have current as a dependency
+            // These are the modules that depend ON current
+            val allModules = graph.getModules()
+            allModules.forEach { module ->
+                val deps = graph.getDependenciesOf(module)
+                if (current in deps) {
+                    val newDegree = (inDegree[module] ?: 0) - 1
+                    inDegree[module] = newDegree
 
-                if (newDegree == 0) {
-                    queue.add(dependent)
+                    if (newDegree == 0 && module !in result) {
+                        queue.add(module)
+                    }
                 }
             }
         }
 
         // If not all modules are processed, there's a cycle (shouldn't happen as we checked earlier)
-        if (result.size != modules.size) {
-            logger.error { "Topological sort failed: processed ${result.size} out of ${modules.size} modules" }
+        val totalModules = graph.getModules().size
+        if (result.size != totalModules) {
+            logger.error { "Topological sort failed: processed ${result.size} out of $totalModules modules" }
             return null
         }
 
@@ -87,9 +93,9 @@ class TopologicalSorter(private val graph: DependencyGraph) {
         val result = mutableListOf<Module>()
         val inDegree = mutableMapOf<Module, Int>()
 
-        // Initialize in-degree for all modules
+        // Initialize out-degree for all modules (number of dependencies)
         modules.forEach { module ->
-            inDegree[module] = graph.getInDegree(module)
+            inDegree[module] = graph.getOutDegree(module)
         }
 
         // Use a priority queue based on complexity scores
@@ -97,7 +103,7 @@ class TopologicalSorter(private val graph: DependencyGraph) {
             compareByDescending { complexityScores[it] ?: 0.0 }
         )
 
-        // Find all modules with in-degree 0
+        // Find all modules with out-degree 0 (no dependencies)
         inDegree.filter { it.value == 0 }.forEach { (module, _) ->
             queue.add(module)
         }
@@ -107,20 +113,25 @@ class TopologicalSorter(private val graph: DependencyGraph) {
             val current = queue.poll()
             result.add(current)
 
-            // Reduce in-degree of dependent modules
-            graph.getDependentsOf(current).forEach { dependent ->
-                val newDegree = (inDegree[dependent] ?: 0) - 1
-                inDegree[dependent] = newDegree
+            // Get all modules that have current as a dependency
+            val allModules = graph.getModules()
+            allModules.forEach { module ->
+                val deps = graph.getDependenciesOf(module)
+                if (current in deps) {
+                    val newDegree = (inDegree[module] ?: 0) - 1
+                    inDegree[module] = newDegree
 
-                if (newDegree == 0) {
-                    queue.add(dependent)
+                    if (newDegree == 0 && module !in result) {
+                        queue.add(module)
+                    }
                 }
             }
         }
 
         // Verify all modules are processed
-        if (result.size != modules.size) {
-            logger.error { "Priority topological sort failed: processed ${result.size} out of ${modules.size} modules" }
+        val totalModules = graph.getModules().size
+        if (result.size != totalModules) {
+            logger.error { "Priority topological sort failed: processed ${result.size} out of $totalModules modules" }
             return null
         }
 
@@ -148,9 +159,9 @@ class TopologicalSorter(private val graph: DependencyGraph) {
         val processed = mutableSetOf<Module>()
         val inDegree = mutableMapOf<Module, Int>()
 
-        // Initialize in-degree
+        // Initialize out-degree (number of dependencies)
         graph.getModules().forEach { module ->
-            inDegree[module] = graph.getInDegree(module)
+            inDegree[module] = graph.getOutDegree(module)
         }
 
         while (processed.size < graph.size()) {
@@ -168,11 +179,11 @@ class TopologicalSorter(private val graph: DependencyGraph) {
             layers.add(currentLayer)
             processed.addAll(currentLayer)
 
-            // Update in-degrees
-            currentLayer.forEach { module ->
-                graph.getDependentsOf(module).forEach { dependent ->
-                    if (dependent !in processed) {
-                        inDegree[dependent] = (inDegree[dependent] ?: 0) - 1
+            // Update in-degrees for modules that depend on current layer
+            currentLayer.forEach { current ->
+                graph.getModules().forEach { module ->
+                    if (module !in processed && current in graph.getDependenciesOf(module)) {
+                        inDegree[module] = (inDegree[module] ?: 0) - 1
                     }
                 }
             }

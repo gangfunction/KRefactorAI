@@ -75,14 +75,27 @@ class OpenAIClient(
                         messages = listOf(
                             ChatMessage(
                                 role = "system",
-                                content = "You are an expert software architect specializing in code refactoring and dependency management."
+                                content = """You are a senior Kotlin architect with 10+ years of experience in large-scale refactoring.
+                                    |
+                                    |Your responses MUST:
+                                    |1. Be SPECIFIC - mention exact Kotlin patterns, not generic advice
+                                    |2. Include CODE examples when relevant
+                                    |3. Reference specific refactoring techniques (Extract Interface, Dependency Injection, etc.)
+                                    |4. Consider Kotlin idioms: data classes, sealed classes, extension functions, coroutines
+                                    |5. Provide step-by-step action items
+                                    |
+                                    |AVOID:
+                                    |- Generic statements like "improve code quality"
+                                    |- Vague advice without concrete steps
+                                    |- Repeating the problem without solutions
+                                    """.trimMargin()
                             ),
                             ChatMessage(
                                 role = "user",
                                 content = prompt
                             )
                         ),
-                        temperature = 0.7,
+                        temperature = 0.2,
                         maxTokens = 500
                     ))
                 }
@@ -109,37 +122,88 @@ class OpenAIClient(
         dependents: List<String>,
         complexityScore: Double
     ): String = buildString {
-        appendLine("Analyze the following module and provide refactoring suggestions:")
+        appendLine("# Refactoring Analysis Request")
         appendLine()
-        appendLine("Module: $moduleName")
-        appendLine("Complexity Score: ${"%.2f".format(complexityScore)} (0.0 = simple, 1.0 = complex)")
+        appendLine("## Package Information")
+        appendLine("- **Name**: `$moduleName`")
+        appendLine("- **Complexity Score**: ${"%.2f".format(complexityScore)} (0.0=simple, 1.0=very complex)")
+        appendLine("- **Incoming Dependencies**: ${dependents.size} packages depend on this")
+        appendLine("- **Outgoing Dependencies**: ${dependencies.size} packages this depends on")
         appendLine()
-        appendLine("Dependencies (${dependencies.size}):")
-        if (dependencies.isEmpty()) {
-            appendLine("  - None")
-        } else {
-            dependencies.take(10).forEach { appendLine("  - $it") }
-            if (dependencies.size > 10) {
-                appendLine("  ... and ${dependencies.size - 10} more")
+
+        // Detailed dependency information
+        if (dependencies.isNotEmpty()) {
+            appendLine("### Dependencies (what this package uses):")
+            dependencies.take(5).forEach { appendLine("  - `$it`") }
+            if (dependencies.size > 5) appendLine("  - ... and ${dependencies.size - 5} more")
+            appendLine()
+        }
+
+        if (dependents.isNotEmpty()) {
+            appendLine("### Dependents (packages that use this):")
+            dependents.take(5).forEach { appendLine("  - `$it`") }
+            if (dependents.size > 5) appendLine("  - ... and ${dependents.size - 5} more")
+            appendLine()
+        }
+
+        // Context-specific analysis request
+        appendLine("## Analysis Context")
+        when {
+            complexityScore > 0.7 && dependents.size > 3 -> {
+                appendLine("🚨 **CRITICAL REFACTORING NEEDED**")
+                appendLine("- High complexity (${String.format("%.2f", complexityScore)}) + ${dependents.size} dependents")
+                appendLine("- This is a bottleneck in the architecture")
+                appendLine("- Refactoring will impact many packages")
+            }
+            complexityScore > 0.7 -> {
+                appendLine("⚠️ **HIGH COMPLEXITY**")
+                appendLine("- Complexity score: ${String.format("%.2f", complexityScore)}")
+                appendLine("- Needs simplification and decomposition")
+            }
+            dependents.size > 5 -> {
+                appendLine("⚠️ **CORE INFRASTRUCTURE PACKAGE**")
+                appendLine("- ${dependents.size} packages depend on this")
+                appendLine("- Changes must maintain backward compatibility")
+                appendLine("- Consider extracting stable interfaces")
+            }
+            dependencies.size > 5 -> {
+                appendLine("⚠️ **TOO MANY DEPENDENCIES**")
+                appendLine("- Depends on ${dependencies.size} packages")
+                appendLine("- Likely violates Single Responsibility Principle")
+                appendLine("- Consider splitting into focused modules")
+            }
+            dependencies.isEmpty() && dependents.isEmpty() -> {
+                appendLine("ℹ️ **ISOLATED PACKAGE**")
+                appendLine("- No dependencies or dependents")
+                appendLine("- Safe to refactor or potentially remove")
+            }
+            else -> {
+                appendLine("✅ **STANDARD PACKAGE**")
+                appendLine("- Moderate complexity and coupling")
             }
         }
         appendLine()
-        appendLine("Dependents (${dependents.size}):")
-        if (dependents.isEmpty()) {
-            appendLine("  - None")
-        } else {
-            dependents.take(10).forEach { appendLine("  - $it") }
-            if (dependents.size > 10) {
-                appendLine("  ... and ${dependents.size - 10} more")
-            }
-        }
+
+        appendLine("## Required Output")
+        appendLine("Provide a refactoring plan with:")
         appendLine()
-        appendLine("Please provide:")
-        appendLine("1. Key refactoring priorities for this module")
-        appendLine("2. Potential risks or challenges")
-        appendLine("3. Recommended approach (2-3 sentences)")
+        appendLine("### 1. Specific Refactoring Actions")
+        appendLine("List 2-3 CONCRETE actions with Kotlin code patterns:")
+        appendLine("- Example: \"Extract interface `IUserRepository` from `UserRepository` class\"")
+        appendLine("- Example: \"Split into `UserValidation` and `UserPersistence` packages\"")
+        appendLine("- Example: \"Convert to sealed class hierarchy for type safety\"")
         appendLine()
-        appendLine("Keep the response concise and actionable.")
+        appendLine("### 2. Implementation Steps")
+        appendLine("Provide step-by-step instructions:")
+        appendLine("- Step 1: [specific action]")
+        appendLine("- Step 2: [specific action]")
+        appendLine("- Step 3: [specific action]")
+        appendLine()
+        appendLine("### 3. Risk Mitigation")
+        appendLine("What specific issues to watch for during refactoring?")
+        appendLine()
+        appendLine("**Format**: Use bullet points. Be specific. Include Kotlin code examples if relevant.")
+        appendLine("**Length**: 200-300 words maximum.")
     }
 
     /**

@@ -42,7 +42,8 @@ data class AnalysisResult(
     val projectType: ProjectType,
     val modulesFound: Int,
     val dependenciesFound: Int,
-    val warnings: List<String> = emptyList()
+    val warnings: List<String> = emptyList(),
+    val refactoringPlan: io.github.gangfunction.krefactorai.model.RefactoringPlan? = null
 ) {
     override fun toString(): String = buildString {
         appendLine("=== Analysis Result ===")

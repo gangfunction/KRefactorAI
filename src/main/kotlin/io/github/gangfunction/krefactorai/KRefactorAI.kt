@@ -145,12 +145,28 @@ class KRefactorAI(
 
         // Return enhanced result with refactoring plan
         return result.copy(
+            refactoringPlan = plan,
             warnings = result.warnings + if (plan.circularDependencies.isNotEmpty()) {
                 listOf("Refactoring plan contains ${plan.circularDependencies.size} circular dependencies")
             } else {
                 emptyList()
             }
         )
+    }
+
+    /**
+     * Automatically analyze a project and return the refactoring plan directly
+     */
+    fun analyzeProjectAndGetPlan(projectPath: String, includeAISuggestions: Boolean = enableAI): RefactoringPlan {
+        return analyzeProjectAndGetPlan(Path(projectPath), includeAISuggestions)
+    }
+
+    /**
+     * Automatically analyze a project and return the refactoring plan directly
+     */
+    fun analyzeProjectAndGetPlan(projectPath: Path, includeAISuggestions: Boolean = enableAI): RefactoringPlan {
+        val result = analyzeProject(projectPath, includeAISuggestions)
+        return result.refactoringPlan ?: throw IllegalStateException("Failed to generate refactoring plan")
     }
 
     /**

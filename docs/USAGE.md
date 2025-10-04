@@ -1,254 +1,280 @@
-# KRefactorAI Usage Guide
+package io.github.gangfunction.krefactorai
 
-This guide provides detailed instructions on how to use KRefactorAI to analyze and refactor your Kotlin/Java projects.
-
-## Table of Contents
-
-1. [Installation](#installation)
-2. [Basic Usage](#basic-usage)
-3. [Advanced Features](#advanced-features)
-4. [API Reference](#api-reference)
-5. [Examples](#examples)
-
----
-
-## Installation
-
-### Gradle (Kotlin DSL)
-
-```kotlin
-dependencies {
-    implementation("io.github.gangfunction:krefactorai:0.1.0-SNAPSHOT")
-}
-```
-
-### Gradle (Groovy)
-
-```groovy
-dependencies {
-    implementation 'io.github.gangfunction:krefactorai:0.1.0-SNAPSHOT'
-}
-```
-
-### Maven
-
-```xml
-<dependency>
-    <groupId>io.github.gangfunction</groupId>
-    <artifactId>krefactorai</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
-</dependency>
-```
-
----
-
-## Basic Usage
-
-### 1. Create a Dependency Graph
-
-```kotlin
+import io.github.gangfunction.krefactorai.ai.OpenAIClient
+import io.github.gangfunction.krefactorai.analyzer.AutoProjectAnalyzer
+import io.github.gangfunction.krefactorai.analyzer.AnalysisResult
+import io.github.gangfunction.krefactorai.config.ApiKeyManager
+import io.github.gangfunction.krefactorai.core.RefactoringOrderCalculator
 import io.github.gangfunction.krefactorai.graph.DependencyGraph
 import io.github.gangfunction.krefactorai.model.*
+import kotlinx.coroutines.runBlocking
+import mu.KotlinLogging
+import java.nio.file.Path
+import kotlin.io.path.Path
 
-val graph = DependencyGraph()
+private val logger = KotlinLogging.logger {}
 
-// Create modules
-val moduleA = Module("ModuleA", "/path/to/A", ModuleType.PACKAGE)
-val moduleB = Module("ModuleB", "/path/to/B", ModuleType.PACKAGE)
-
-// Add modules to graph
-graph.addModule(moduleA)
-graph.addModule(moduleB)
-
-// Add dependency (A depends on B)
-graph.addDependency(Dependency(moduleA, moduleB))
+/**
+ * Main entry point for KRefactorAI library
+ * 
+ * Usage:
+ * ```kotlin
+* val refactorAI = KRefactorAI()
+ * val graph = DependencyGraph()
+ * 
+ * // Add modules and dependencies
+ * graph.addModule(Module("ModuleA", "/path/to/A"))
+ * graph.addModule(Module("ModuleB", "/path/to/B"))
+ * graph.addDependency(Dependency(moduleA, moduleB))
+ * 
+ * // Analyze and get refactoring plan
+ * val plan = refactorAI.analyze(graph)
+ * println(plan)
+ *
 ```
+ */
+class KRefactorAI(
+    private val enableAI: Boolean = true,
+    private val aiModel: String = "gpt-4"
+) {
+    
+    private val openAIClient: OpenAIClient? = if (enableAI) {
+        try {
+            OpenAIClient(model = aiModel)
+        } catch (e: IllegalStateException) {
+            logger.warn { "OpenAI client initialization failed: ${e.message}" }
+            logger.warn { "AI suggestions will be disabled. Analysis will continue without AI." }
+            null
+        }
+    } else {
+        null
+    }
 
-### 2. Analyze Dependencies
+    init {
+        logger.info { "KRefactorAI initialized (AI enabled: $enableAI)" }
+        
+        if (enableAI && openAIClient == null) {
+            logger.warn { "AI features are disabled due to missing API key" }
+            ApiKeyManager.printSetupInstructions()
+        }
+    }
 
-```kotlin
-import io.github.gangfunction.krefactorai.KRefactorAI
+    /**
+     * Analyze a dependency graph and generate refactoring plan
+     */
+    fun analyze(graph: DependencyGraph, includeAISuggestions: Boolean = enableAI): RefactoringPlan {
+        logger.info { "Starting dependency analysis" }
+        
+        if (graph.isEmpty()) {
+            logger.warn { "Empty dependency graph provided" }
+            return RefactoringPlan(
+                modules = emptyList(),
+                circularDependencies = emptyList(),
+                totalComplexity = 0.0,
+                estimatedTime = "0 minutes"
+            )
+        }
 
-val refactorAI = KRefactorAI(enableAI = false)
-val plan = refactorAI.analyze(graph)
+        // Calculate refactoring order
+        val calculator = RefactoringOrderCalculator(graph)
+        val plan = calculator.calculateRefactoringOrder()
 
-// Print the refactoring plan
-println(plan)
-```
+        // Add AI suggestions if enabled
+        if (includeAISuggestions && openAIClient != null) {
+            logger.info { "Generating AI suggestions for ${plan.modules.size} modules" }
+            val enhancedSteps = addAISuggestions(plan.modules)
+            
+            return plan.copy(modules = enhancedSteps)
+        }
 
-### 3. Get Refactoring Order
+        return plan
+    }
 
-```kotlin
-plan.modules.forEach { step ->
-    println("${step.priority}. ${step.module.name}")
-    println("   Complexity: ${step.complexityScore}")
-    println("   Dependencies: ${step.dependencies.size}")
-    println("   Dependents: ${step.dependents.size}")
-}
-```
+    /**
+     * Add AI suggestions to refactoring steps
+     */
+    private fun addAISuggestions(steps: List<RefactoringStep>): List<RefactoringStep> = runBlocking {
+        steps.map { step ->
+            try {
+                val suggestion = openAIClient?.generateRefactoringSuggestion(
+                    moduleName = step.module.name,
+                    dependencies = step.dependencies.map { it.name },
+                    dependents = step.dependents.map { it.name },
+                    complexityScore = step.complexityScore
+                )
+                
+                step.copy(aiSuggestion = suggestion)
+            } catch (e: Exception) {
+                logger.error(e) { "Failed to generate AI suggestion for ${step.module.name}" }
+                step
+            }
+        }
+    }
 
----
+    /**
+     * Quick analysis without AI suggestions
+     */
+    fun quickAnalyze(graph: DependencyGraph): RefactoringPlan {
+        return analyze(graph, includeAISuggestions = false)
+    }
 
-## Advanced Features
+    /**
+     * Automatically analyze a project from its path
+     * This will detect the project type (Gradle/Maven) and analyze source code
+     */
+    fun analyzeProject(projectPath: String, includeAISuggestions: Boolean = enableAI): AnalysisResult {
+        return analyzeProject(Path(projectPath), includeAISuggestions)
+    }
 
-### AI-Powered Suggestions
+    /**
+     * Automatically analyze a project from its path
+     */
+    fun analyzeProject(projectPath: Path, includeAISuggestions: Boolean = enableAI): AnalysisResult {
+        logger.info { "Auto-analyzing project at: $projectPath" }
 
-To enable AI-powered refactoring suggestions, you need to set up your OpenAI API key:
+        val autoAnalyzer = AutoProjectAnalyzer()
+        val result = autoAnalyzer.analyze(projectPath)
 
-```bash
-export OPENAI_API_KEY="your-api-key-here"
-```
+        logger.info { result.toString() }
 
-Then enable AI in your code:
+        // Generate refactoring plan
+        val plan = if (includeAISuggestions && openAIClient != null) {
+            analyze(result.graph, includeAISuggestions = true)
+        } else {
+            analyze(result.graph, includeAISuggestions = false)
+        }
 
-```kotlin
-val refactorAI = KRefactorAI(enableAI = true)
-val plan = refactorAI.analyze(graph, includeAISuggestions = true)
+        // Return enhanced result with refactoring plan
+        return result.copy(
+            refactoringPlan = plan,
+            warnings = result.warnings + if (plan.circularDependencies.isNotEmpty()) {
+                listOf("Refactoring plan contains ${plan.circularDependencies.size} circular dependencies")
+            } else {
+                emptyList()
+            }
+        )
+    }
 
-plan.modules.forEach { step ->
-    println("Module: ${step.module.name}")
-    println("AI Suggestion: ${step.aiSuggestion}")
-}
-```
+    /**
+     * Automatically analyze a project and return the refactoring plan directly
+     */
+    fun analyzeProjectAndGetPlan(projectPath: String, includeAISuggestions: Boolean = enableAI): RefactoringPlan {
+        return analyzeProjectAndGetPlan(Path(projectPath), includeAISuggestions)
+    }
 
-### Detect Circular Dependencies
+    /**
+     * Automatically analyze a project and return the refactoring plan directly
+     */
+    fun analyzeProjectAndGetPlan(projectPath: Path, includeAISuggestions: Boolean = enableAI): RefactoringPlan {
+        val result = analyzeProject(projectPath, includeAISuggestions)
+        return result.refactoringPlan ?: throw IllegalStateException("Failed to generate refactoring plan")
+    }
 
-```kotlin
-val cycles = refactorAI.findCircularDependencies(graph)
+    /**
+     * Get circular dependencies only
+     */
+    fun findCircularDependencies(graph: DependencyGraph): List<List<Module>> {
+        return graph.detectCircularDependencies()
+    }
 
-if (cycles.isNotEmpty()) {
-    println("⚠️ Circular dependencies found:")
-    cycles.forEach { cycle ->
-        println(cycle.joinToString(" -> ") { it.name })
+    /**
+     * Get refactoring layers (modules that can be refactored in parallel)
+     */
+    fun getRefactoringLayers(graph: DependencyGraph): List<Set<Module>>? {
+        val calculator = RefactoringOrderCalculator(graph)
+        return calculator.getRefactoringLayers()
+    }
+
+    /**
+     * Test OpenAI API connection
+     */
+    suspend fun testAIConnection(): Boolean {
+        return openAIClient?.testConnection() ?: false
+    }
+
+    /**
+     * Check if AI features are available
+     */
+    fun isAIEnabled(): Boolean = openAIClient != null
+
+    /**
+     * Get API key status
+     */
+    fun getApiKeyStatus(): String {
+        val status = ApiKeyManager.getApiKeyStatus()
+        return status.message
+    }
+
+    /**
+     * Print setup instructions
+     */
+    fun printSetupInstructions() {
+        ApiKeyManager.printSetupInstructions()
+    }
+
+    /**
+     * Close resources
+     */
+    fun close() {
+        openAIClient?.close()
+        logger.info { "KRefactorAI closed" }
+    }
+
+    companion object {
+        /**
+         * Create a simple example dependency graph for testing
+         */
+        fun createExampleGraph(): DependencyGraph {
+            val graph = DependencyGraph()
+            
+            // Create modules
+            val moduleA = Module("ModuleA", "/example/A", ModuleType.PACKAGE)
+            val moduleB = Module("ModuleB", "/example/B", ModuleType.PACKAGE)
+            val moduleC = Module("ModuleC", "/example/C", ModuleType.PACKAGE)
+            val moduleD = Module("ModuleD", "/example/D", ModuleType.PACKAGE)
+            val moduleE = Module("ModuleE", "/example/E", ModuleType.PACKAGE)
+            
+            // Add modules
+            graph.addModule(moduleA)
+            graph.addModule(moduleB)
+            graph.addModule(moduleC)
+            graph.addModule(moduleD)
+            graph.addModule(moduleE)
+            
+            // Add dependencies
+            // A depends on B and C
+            graph.addDependency(Dependency(moduleA, moduleB, weight = 1.0))
+            graph.addDependency(Dependency(moduleA, moduleC, weight = 1.0))
+            
+            // B depends on D
+            graph.addDependency(Dependency(moduleB, moduleD, weight = 1.0))
+            
+            // C depends on D and E
+            graph.addDependency(Dependency(moduleC, moduleD, weight = 1.0))
+            graph.addDependency(Dependency(moduleC, moduleE, weight = 1.0))
+            
+            logger.info { "Created example graph with 5 modules and 5 dependencies" }
+            return graph
+        }
+
+        /**
+         * Get version information
+         */
+        fun getVersion(): String = "0.1.0-SNAPSHOT"
+
+        /**
+         * Get library information
+         */
+        fun getInfo(): String = """
+            |KRefactorAI v${getVersion()}
+            |Untangle Dependencies with AI and Math
+            |
+            |GitHub: https://github.com/gangfunction/KRefactorAI
+            |Documentation: ${ApiKeyManager.getSetupGuideUrl()}
+        """.trimMargin()
     }
 }
-```
 
-### Get Parallel Refactoring Layers
-
-```kotlin
-val layers = refactorAI.getRefactoringLayers(graph)
-
-layers?.forEachIndexed { index, layer ->
-    println("Layer ${index + 1}:")
-    layer.forEach { module ->
-        println("  - ${module.name}")
-    }
-}
-```
-
-### Quick Analysis (Without AI)
-
-```kotlin
-val plan = refactorAI.quickAnalyze(graph)
-```
-
----
-
-## API Reference
-
-### KRefactorAI
-
-Main class for analyzing dependencies and generating refactoring plans.
-
-#### Constructor
-
-```kotlin
-KRefactorAI(
-    enableAI: Boolean = true,
-    aiModel: String = "gpt-4"
-)
-```
-
-#### Methods
-
-- `analyze(graph: DependencyGraph, includeAISuggestions: Boolean = enableAI): RefactoringPlan`
-  - Analyze a dependency graph and generate a complete refactoring plan
-  
-- `quickAnalyze(graph: DependencyGraph): RefactoringPlan`
-  - Quick analysis without AI suggestions
-  
-- `findCircularDependencies(graph: DependencyGraph): List<List<Module>>`
-  - Find all circular dependencies in the graph
-  
-- `getRefactoringLayers(graph: DependencyGraph): List<Set<Module>>?`
-  - Get modules grouped by layers for parallel refactoring
-  
-- `isAIEnabled(): Boolean`
-  - Check if AI features are available
-  
-- `getApiKeyStatus(): String`
-  - Get the current API key status
-  
-- `close()`
-  - Close resources and cleanup
-
-### DependencyGraph
-
-Represents a directed graph of module dependencies.
-
-#### Methods
-
-- `addModule(module: Module)`
-  - Add a module to the graph
-  
-- `addDependency(dependency: Dependency)`
-  - Add a dependency between two modules
-  
-- `getModules(): Set<Module>`
-  - Get all modules in the graph
-  
-- `getDependencies(): List<Dependency>`
-  - Get all dependencies
-  
-- `getDependenciesOf(module: Module): Set<Module>`
-  - Get modules that this module depends on
-  
-- `getDependentsOf(module: Module): Set<Module>`
-  - Get modules that depend on this module
-  
-- `detectCircularDependencies(): List<List<Module>>`
-  - Detect circular dependencies
-
-### Module
-
-Represents a module or package.
-
-```kotlin
-data class Module(
-    val name: String,
-    val path: String,
-    val type: ModuleType = ModuleType.PACKAGE
-)
-```
-
-### Dependency
-
-Represents a dependency relationship.
-
-```kotlin
-data class Dependency(
-    val from: Module,
-    val to: Module,
-    val weight: Double = 1.0,
-    val type: DependencyType = DependencyType.DIRECT
-)
-```
-
-### RefactoringPlan
-
-Contains the complete refactoring plan.
-
-```kotlin
-data class RefactoringPlan(
-    val modules: List<RefactoringStep>,
-    val circularDependencies: List<List<Module>>,
-    val totalComplexity: Double,
-    val estimatedTime: String
-)
-```
-
-### RefactoringStep
 
 Represents a single step in the refactoring plan.
 
