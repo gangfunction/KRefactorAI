@@ -1,445 +1,365 @@
-package io.github.gangfunction.krefactorai.ai
+# Contributing to KRefactorAI
 
-import io.github.gangfunction.krefactorai.config.ApiKeyManager
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.plugins.logging.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import mu.KotlinLogging
+Thank you for your interest in contributing to KRefactorAI! 🎉
 
-private val logger = KotlinLogging.logger {}
+## 📋 Table of Contents
 
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [Development Setup](#development-setup)
+- [How to Contribute](#how-to-contribute)
+- [Coding Standards](#coding-standards)
+- [Testing Guidelines](#testing-guidelines)
+- [Pull Request Process](#pull-request-process)
+- [Issue Guidelines](#issue-guidelines)
+
+---
+
+## Code of Conduct
+
+This project follows a simple code of conduct:
+- Be respectful and inclusive
+- Provide constructive feedback
+- Focus on what is best for the community
+- Show empathy towards other community members
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Java 17 or higher**
+- **Kotlin 1.9+**
+- **Git**
+- **Gradle 8.5+** (wrapper included)
+
+### Fork and Clone
+
+1. Fork the repository on GitHub
+2. Clone your fork:
+   ```bash
+git clone https://github.com/YOUR_USERNAME/KRefactorAI.git
+   cd KRefactorAI
+```
+
+3. Add upstream remote:
+   ```bash
+git remote add upstream https://github.com/gangfunction/KRefactorAI.git
+```
+
+---
+
+## Development Setup
+
+### 1. Build the Project
+
+```bash
+./gradlew build
+```
+
+### 2. Run Tests
+
+```bash
+./gradlew test
+```
+
+### 3. Run Code Quality Checks
+
+```bash
+# Ktlint (code formatting)
+./gradlew ktlintCheck
+
+# Detekt (static analysis)
+./gradlew detekt
+
+# All checks
+./gradlew check
+```
+
+### 4. Format Code
+
+```bash
+./gradlew ktlintFormat
+```
+
+---
+
+## How to Contribute
+
+### Types of Contributions
+
+We welcome various types of contributions:
+
+1. **🐛 Bug Reports**: Found a bug? Open an issue!
+2. **✨ Feature Requests**: Have an idea? We'd love to hear it!
+3. **📝 Documentation**: Improve docs, add examples
+4. **🔧 Code**: Fix bugs, add features, improve performance
+5. **🧪 Tests**: Add test cases, improve coverage
+6. **🎨 UI/UX**: Improve output formatting, error messages
+
+### Workflow
+
+1. **Create an Issue** (for significant changes)
+   - Describe the problem or feature
+   - Discuss the approach
+   - Get feedback before coding
+
+2. **Create a Branch**
+   ```bash
+git checkout -b feature/your-feature-name
+   # or
+   git checkout -b fix/your-bug-fix
+```
+
+3. **Make Changes**
+   - Write clean, readable code
+   - Follow coding standards
+   - Add tests for new features
+   - Update documentation
+
+4. **Commit Changes**
+   ```bash
+git add .
+   git commit -m "feat: Add amazing feature"
+```
+
+5. **Push and Create PR**
+   ```bash
+git push origin feature/your-feature-name
+```
+
+---
+
+## Coding Standards
+
+### Kotlin Style Guide
+
+We follow the [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html).
+
+**Key Points:**
+- Use 4 spaces for indentation
+- Maximum line length: 120 characters
+- Use meaningful variable names
+- Add KDoc comments for public APIs
+- Prefer immutability (`val` over `var`)
+- Use data classes for DTOs
+- Leverage Kotlin idioms (extension functions, sealed classes, etc.)
+
+### Code Quality Tools
+
+- **Ktlint**: Enforces Kotlin style guide
+- **Detekt**: Static code analysis
+- **Jacoco**: Code coverage (minimum 70%)
+
+### Example
+
+```kotlin
 /**
- * Client for interacting with OpenAI API
+ * Analyzes a dependency graph and generates a refactoring plan.
+ *
+ * @param graph The dependency graph to analyze
+ * @param includeAISuggestions Whether to include AI-powered suggestions
+ * @return A refactoring plan with ordered steps
  */
-class OpenAIClient(
-    private val apiKey: String = ApiKeyManager.getApiKey(),
-    private val model: String = "gpt-4",
-    private val timeoutMillis: Long = 30_000,
-) {
-    private val client =
-        HttpClient(CIO) {
-            install(ContentNegotiation) {
-                json(
-                    Json {
-                        ignoreUnknownKeys = true
-                        isLenient = true
-                        prettyPrint = true
-                    },
-                )
-            }
-
-            install(Logging) {
-                logger = Logger.DEFAULT
-                level = LogLevel.INFO
-            }
-
-            install(HttpTimeout) {
-                requestTimeoutMillis = timeoutMillis
-                connectTimeoutMillis = 10_000
-                socketTimeoutMillis = timeoutMillis
-            }
-
-            defaultRequest {
-                url("https://api.openai.com/v1/")
-                header("Authorization", "Bearer $apiKey")
-                header("Content-Type", "application/json")
-            }
-        }
-
-    /**
-     * Generate refactoring suggestion using OpenAI API
-     */
-    suspend fun generateRefactoringSuggestion(
-        moduleName: String,
-        dependencies: List<String>,
-        dependents: List<String>,
-        complexityScore: Double,
-    ): String {
-        logger.info { "Generating refactoring suggestion for module: $moduleName" }
-
-        val prompt = buildPrompt(moduleName, dependencies, dependents, complexityScore)
-
-        return try {
-            val suggestion = callOpenAIAPI(prompt)
-            logger.info { "Successfully generated suggestion for $moduleName" }
-            suggestion
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to generate suggestion for $moduleName" }
-            "Error generating suggestion: ${e.message}"
-        }
+fun analyze(
+    graph: DependencyGraph,
+    includeAISuggestions: Boolean = enableAI,
+): RefactoringPlan {
+    if (graph.isEmpty()) {
+        return createEmptyPlan()
     }
 
-    private suspend fun callOpenAIAPI(prompt: String): String =
-        withTimeout(timeoutMillis) {
-            val response =
-                client.post("chat/completions") {
-                    setBody(createChatCompletionRequest(prompt))
-                }
+    val calculator = RefactoringOrderCalculator(graph)
+    val plan = calculator.calculateRefactoringOrder()
 
-            val completion: ChatCompletionResponse = response.body()
-            completion.choices.firstOrNull()?.message?.content ?: "No suggestion generated"
-        }
-
-    private fun createChatCompletionRequest(userPrompt: String) =
-        ChatCompletionRequest(
-            model = model,
-            messages =
-                listOf(
-                    ChatMessage(role = "system", content = getSystemPrompt()),
-                    ChatMessage(role = "user", content = userPrompt),
-                ),
-            temperature = 0.3,
-            maxTokens = 600,
-        )
-
-    private fun getSystemPrompt() =
-        """You are a senior Kotlin architect creating actionable refactoring checklists.
-        |
-        |Output Format Requirements:
-        |1. Use GitHub-flavored Markdown with task lists
-        |2. Each action must be a checkbox item: - [ ] Action description
-        |3. Include specific Kotlin code patterns and examples
-        |4. Organize into clear sections with ### headers
-        |5. Keep total response under 400 words
-        |
-        |Required Sections:
-        |### 🎯 Refactoring Actions
-        |- [ ] Specific action with Kotlin pattern (e.g., Extract interface, Use sealed class)
-        |- [ ] Another specific action
-        |
-        |### 📝 Implementation Steps
-        |- [ ] Step 1: Concrete action
-        |- [ ] Step 2: Concrete action
-        |
-        |### ⚠️ Risks & Mitigation
-        |- [ ] Risk to watch for
-        |- [ ] Mitigation strategy
-        |
-        |Include brief Kotlin code examples in ```kotlin
-blocks when helpful.
-        |Be specific, actionable, and concise.
-        """.trimMargin()
-
-
-    /**
-     * Build prompt for refactoring suggestion
-     */
-    private fun buildPrompt(
-        moduleName: String,
-        dependencies: List<String>,
-        dependents: List<String>,
-        complexityScore: Double,
-    ): String =
-        buildString {
-            appendLine("# Refactoring Analysis Request")
-            appendLine()
-            appendPackageInformation(moduleName, dependencies, dependents, complexityScore)
-            appendDependencyDetails(dependencies, dependents)
-            appendAnalysisContext(complexityScore, dependencies, dependents)
-
-            appendLine("## Task")
-            appendLine("Create an actionable refactoring checklist in Markdown format.")
-            appendLine()
-            appendLine("### Required Format:")
-            appendLine("
-```markdown")
-            appendLine("### 🎯 Refactoring Actions")
-            appendLine("- [ ] Extract interface for better abstraction")
-            appendLine("- [ ] Use sealed class for type safety")
-            appendLine("- [ ] Apply dependency injection pattern")
-            appendLine()
-            appendLine("### 📝 Implementation Steps")
-            appendLine("- [ ] Step 1: Identify classes to refactor")
-            appendLine("- [ ] Step 2: Create new interfaces/classes")
-            appendLine("- [ ] Step 3: Update dependencies")
-            appendLine("- [ ] Step 4: Run tests and verify")
-            appendLine()
-            appendLine("### ⚠️ Risks & Mitigation")
-            appendLine("- [ ] Risk: Breaking changes → Mitigation: Use deprecation warnings")
-            appendLine("- [ ] Risk: Performance impact → Mitigation: Add benchmarks")
-            appendLine("```")
-            appendLine()
-            appendLine("Include brief Kotlin code examples where helpful. Keep it concise and actionable.")
-        }
-
-    private fun StringBuilder.appendPackageInformation(
-        moduleName: String,
-        dependencies: List<String>,
-        dependents: List<String>,
-        complexityScore: Double,
-    ) {
-        appendLine("## Package Information")
-        appendLine("- **Name**: `$moduleName`")
-        appendLine("- **Complexity Score**: ${"%.2f".format(complexityScore)} (0.0=simple, 1.0=very complex)")
-        appendLine("- **Incoming Dependencies**: ${dependents.size} packages depend on this")
-        appendLine("- **Outgoing Dependencies**: ${dependencies.size} packages this depends on")
-        appendLine()
+    return if (includeAISuggestions && openAIClient != null) {
+        enhancePlanWithAI(plan)
+    } else {
+        plan
     }
+```
+---
 
-    private fun StringBuilder.appendDependencyDetails(
-        dependencies: List<String>,
-        dependents: List<String>,
-    ) {
-        if (dependencies.isNotEmpty()) {
-            appendLine("### Dependencies (what this package uses):")
-            dependencies.take(5).forEach { appendLine("  - `$it`") }
-            if (dependencies.size > 5) appendLine("  - ... and ${dependencies.size - 5} more")
-            appendLine()
-        }
+## Testing Guidelines
 
-        if (dependents.isNotEmpty()) {
-            appendLine("### Dependents (packages that use this):")
-            dependents.take(5).forEach { appendLine("  - `$it`") }
-            if (dependents.size > 5) appendLine("  - ... and ${dependents.size - 5} more")
-            appendLine()
-        }
-    }
+### Writing Tests
 
-    private fun StringBuilder.appendAnalysisContext(
-        complexityScore: Double,
-        dependencies: List<String>,
-        dependents: List<String>,
-    ) {
-        appendLine("## Analysis Context")
-        val contextMessage = determineContextMessage(complexityScore, dependencies.size, dependents.size)
-        appendLine(contextMessage)
-        appendLine()
-    }
+- **Unit Tests**: Test individual components in isolation
+- **Integration Tests**: Test component interactions
+- **Edge Cases**: Test boundary conditions and error cases
+- **Coverage**: Aim for >70% code coverage
 
-    @Suppress("MagicNumber")
-    private fun determineContextMessage(
-        complexityScore: Double,
-        dependenciesCount: Int,
-        dependentsCount: Int,
-    ): String =
-        when {
-            complexityScore > 0.7 && dependentsCount > 3 -> buildCriticalMessage(complexityScore, dependentsCount)
-            complexityScore > 0.7 -> buildHighComplexityMessage(complexityScore)
-            dependentsCount > 5 -> buildCoreInfrastructureMessage(dependentsCount)
-            dependenciesCount > 5 -> buildTooManyDependenciesMessage(dependenciesCount)
-            dependenciesCount == 0 && dependentsCount == 0 -> buildIsolatedMessage()
-            else -> buildStandardMessage()
-        }
+### Test Structure
+```kotlin
+class MyComponentTest {
+    @Test
+    fun `test should do something when condition is met`() {
+        // Given
+        val input = createTestInput()
 
-    private fun buildCriticalMessage(
-        complexityScore: Double,
-        dependentsCount: Int,
-    ) = """
-        🚨 **CRITICAL REFACTORING NEEDED**
-        - High complexity (${"%.2f".format(complexityScore)}) + $dependentsCount dependents
-        - This is a bottleneck in the architecture
-        - Refactoring will impact many packages
-    """.trimIndent()
+        // When
+        val result = component.process(input)
 
-    private fun buildHighComplexityMessage(complexityScore: Double) =
-        """
-        ⚠️ **HIGH COMPLEXITY**
-        - Complexity score: ${"%.2f".format(complexityScore)}
-        - Needs simplification and decomposition
-        """.trimIndent()
-
-    private fun buildCoreInfrastructureMessage(dependentsCount: Int) =
-        """
-        ⚠️ **CORE INFRASTRUCTURE PACKAGE**
-        - $dependentsCount packages depend on this
-        - Changes must maintain backward compatibility
-        - Consider extracting stable interfaces
-        """.trimIndent()
-
-    private fun buildTooManyDependenciesMessage(dependenciesCount: Int) =
-        """
-        ⚠️ **TOO MANY DEPENDENCIES**
-        - Depends on $dependenciesCount packages
-        - Likely violates Single Responsibility Principle
-        - Consider splitting into focused modules
-        """.trimIndent()
-
-    private fun buildIsolatedMessage() =
-        """
-        ℹ️ **ISOLATED PACKAGE**
-        - No dependencies or dependents
-        - Safe to refactor or potentially remove
-        """.trimIndent()
-
-    private fun buildStandardMessage() =
-        """
-        ✅ **STANDARD PACKAGE**
-        - Moderate complexity and coupling
-        """.trimIndent()
-
-    /**
-     * Test API connection
-     */
-    suspend fun testConnection(): Boolean {
-        return try {
-            withTimeout(10_000) {
-                val response =
-                    client.post("chat/completions") {
-                        setBody(
-                            ChatCompletionRequest(
-                                model = model,
-                                messages =
-                                    listOf(
-                                        ChatMessage(role = "user", content = "Hello"),
-                                    ),
-                                maxTokens = 5,
-                            ),
-                        )
-                    }
-                response.status == HttpStatusCode.OK
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "API connection test failed" }
-            false
-        }
-    }
-
-    /**
-     * Close the HTTP client
-     */
-    fun close() {
-        client.close()
+        // Then
+        assertEquals(expected, result)
     }
 }
+```
+### Running Tests
+```bash
+# Run all tests
+./gradlew test
 
-// Data classes for OpenAI API
+# Run specific test class
+./gradlew test --tests "DependencyGraphTest"
 
-@Serializable
-data class ChatCompletionRequest(
-    val model: String,
-    val messages: List<ChatMessage>,
-    val temperature: Double = 0.7,
-    @SerialName("max_tokens")
-    val maxTokens: Int = 500,
-)
+# Run with coverage
+./gradlew test jacocoTestReport
+```
+---
 
-@Serializable
-data class ChatMessage(
-    val role: String,
-    val content: String,
-)
+## Pull Request Process
 
-@Serializable
-data class ChatCompletionResponse(
-    val id: String,
-    val choices: List<Choice>,
-    val usage: Usage? = null,
-)
+### Before Submitting
 
-@Serializable
-data class Choice(
-    val index: Int,
-    val message: ChatMessage,
-    @SerialName("finish_reason")
-    val finishReason: String,
-)
+1. ✅ **Tests pass**: `./gradlew test`
+2. ✅ **Code quality**: `./gradlew ktlintCheck detekt`
+3. ✅ **Build succeeds**: `./gradlew build`
+4. ✅ **Documentation updated**: README, KDoc, etc.
+5. ✅ **Commits are clean**: Use conventional commits
 
-@Serializable
-data class Usage(
-    @SerialName("prompt_tokens")
-    val promptTokens: Int,
-    @SerialName("completion_tokens")
-    val completionTokens: Int,
-    @SerialName("total_tokens")
-    val totalTokens: Int,
-)
-    val completionTokens: Int,
-    @SerialName("total_tokens")
-    val totalTokens: Int,
-)
+### Commit Message Format
 
+We use [Conventional Commits](https://www.conventionalcommits.org/):
+```
+<type>(<scope>): <subject>
 
-@Serializable
-data class ChatMessage(
-    val role: String,
-    val content: String,
-)
+<body>
 
-@Serializable
-data class ChatCompletionResponse(
-    val id: String,
-    val choices: List<Choice>,
-    val usage: Usage? = null,
-)
+<footer>
+```
+**Types:**
+- `feat`: New feature
+- `fix`: Bug fix
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `refactor`: Code refactoring
+- `test`: Adding or updating tests
+- `chore`: Build process, dependencies, etc.
+- `ci`: CI/CD changes
 
-@Serializable
-data class Choice(
-    val index: Int,
-    val message: ChatMessage,
-    @SerialName("finish_reason")
-    val finishReason: String,
-)
+**Examples:**
+```
+feat(analyzer): Add support for Maven multi-module projects
 
-@Serializable
-data class Usage(
-    @SerialName("prompt_tokens")
-    val promptTokens: Int,
-    @SerialName("completion_tokens")
-    val completionTokens: Int,
-    @SerialName("total_tokens")
-    val totalTokens: Int,
-)
-        /**
-         * Create a simple example dependency graph for testing
-         */
-        fun createExampleGraph(): DependencyGraph {
-            val graph = DependencyGraph()
+- Implement MavenProjectAnalyzer
+- Add tests for multi-module detection
+- Update documentation
 
-            // Create modules
-            val moduleA = Module("ModuleA", "/example/A", ModuleType.PACKAGE)
-            val moduleB = Module("ModuleB", "/example/B", ModuleType.PACKAGE)
-            val moduleC = Module("ModuleC", "/example/C", ModuleType.PACKAGE)
-            val moduleD = Module("ModuleD", "/example/D", ModuleType.PACKAGE)
-            val moduleE = Module("ModuleE", "/example/E", ModuleType.PACKAGE)
+Closes #123
+```
 
-            // Add modules
-            graph.addModule(moduleA)
-            graph.addModule(moduleB)
-            graph.addModule(moduleC)
-            graph.addModule(moduleD)
-            graph.addModule(moduleE)
+```
+fix(graph): Fix circular dependency detection for complex cycles
 
-            // Add dependencies
-            // A depends on B and C
-            graph.addDependency(Dependency(moduleA, moduleB, weight = 1.0))
-            graph.addDependency(Dependency(moduleA, moduleC, weight = 1.0))
+The previous implementation failed to detect cycles with more than
+3 nodes. This fix uses Tarjan's algorithm for robust cycle detection.
 
-            // B depends on D
-            graph.addDependency(Dependency(moduleB, moduleD, weight = 1.0))
+Fixes #456
+```
+### PR Template
 
-            // C depends on D and E
-            graph.addDependency(Dependency(moduleC, moduleD, weight = 1.0))
-            graph.addDependency(Dependency(moduleC, moduleE, weight = 1.0))
+When creating a PR, include:
 
-            logger.info { "Created example graph with 5 modules and 5 dependencies" }
-            return graph
-        }
+1. **Description**: What does this PR do?
+2. **Motivation**: Why is this change needed?
+3. **Changes**: List of changes made
+4. **Testing**: How was this tested?
+5. **Screenshots**: If applicable
+6. **Checklist**:
+   - [ ] Tests added/updated
+   - [ ] Documentation updated
+   - [ ] Code quality checks pass
+   - [ ] No breaking changes (or documented)
 
-        /**
-         * Get version information
-         */
-        fun getVersion(): String = "0.1.0-SNAPSHOT"
+---
 
-        /**
-         * Get library information
-         */
-        fun getInfo(): String =
-            """
-            |KRefactorAI v${getVersion()}
-            |Untangle Dependencies with AI and Math
-            |
-            |GitHub: https://github.com/gangfunction/KRefactorAI
-            |Documentation: ${ApiKeyManager.getSetupGuideUrl()}
-            """.trimMargin()
-    }
-}
+## Issue Guidelines
+
+### Bug Reports
+
+Include:
+- **Description**: Clear description of the bug
+- **Steps to Reproduce**: Minimal steps to reproduce
+- **Expected Behavior**: What should happen
+- **Actual Behavior**: What actually happens
+- **Environment**: OS, Java version, Kotlin version
+- **Logs/Screenshots**: If applicable
+
+### Feature Requests
+
+Include:
+- **Problem**: What problem does this solve?
+- **Proposed Solution**: How should it work?
+- **Alternatives**: Other solutions considered
+- **Additional Context**: Examples, mockups, etc.
+
+---
+
+## Development Tips
+
+### Useful Gradle Tasks
+```bash
+# Clean build
+./gradlew clean build
+
+# Run with debug logging
+./gradlew test --debug
+
+# Refresh dependencies
+./gradlew build --refresh-dependencies
+
+# Generate coverage report
+./gradlew jacocoTestReport
+# Report: build/reports/jacoco/test/html/index.html
+
+# Check code style
+./gradlew ktlintCheck
+# Auto-fix: ./gradlew ktlintFormat
+
+# Static analysis
+./gradlew detekt
+# Report: build/reports/detekt/detekt.html
+```
+
+### IDE Setup
+
+**IntelliJ IDEA** (Recommended):
+1. Import as Gradle project
+2. Enable Kotlin plugin
+3. Install Ktlint plugin (optional)
+4. Set code style to Kotlin conventions
+
+**VS Code**:
+1. Install Kotlin extension
+2. Install Gradle extension
+3. Configure Java 17+
+
+---
+
+## Questions?
+
+- **GitHub Issues**: For bugs and features
+- **GitHub Discussions**: For questions and ideas
+- **Email**: gangfunction@gmail.com
+
+---
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the MIT License.
+
+---
+
+Thank you for contributing to KRefactorAI! 🚀
